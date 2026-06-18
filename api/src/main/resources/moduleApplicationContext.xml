@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Beans to add to the current Application context definition -->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:jee="http://www.springframework.org/schema/jee"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:util="http://www.springframework.org/schema/util" xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+  		    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+  		    http://www.springframework.org/schema/context
+  		    http://www.springframework.org/schema/context/spring-context-3.0.xsd
+  		    http://www.springframework.org/schema/jee
+  		    http://www.springframework.org/schema/jee/spring-jee-3.0.xsd
+  		    http://www.springframework.org/schema/tx
+  		    http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+  		    http://www.springframework.org/schema/aop
+  		    http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+  		    http://www.springframework.org/schema/util
+  		    http://www.springframework.org/schema/util/spring-util-3.0.xsd http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+    <context:component-scan base-package="org.openmrs.module.appointments"/>
+
+    <bean id="appointmentNumberGenerator" class="org.openmrs.module.appointments.service.impl.DefaultAppointmentNumberGeneratorImpl"/>
+
+    <bean id="defaultRecurringAppointmentNumberGenerator"
+          class="org.openmrs.module.appointments.service.impl.DefaultRecurringAppointmentNumberGeneratorImpl">
+        <constructor-arg name="appointmentNumberGeneratorLocator">
+            <bean class="org.openmrs.module.appointments.service.impl.AppointmentNumberGeneratorLocatorImpl">
+                <constructor-arg name="appointmentNumberGenerator" ref="appointmentNumberGenerator"/>
+            </bean>
+        </constructor-arg>
+    </bean>
+
+    <bean id="appointmentNumberGeneratorLocator" class="org.openmrs.module.appointments.service.impl.AppointmentNumberGeneratorLocatorImpl">
+        <constructor-arg name="appointmentNumberGenerator" ref="appointmentNumberGenerator"/>
+        <constructor-arg name="recurringAppointmentNumberGenerator" ref="defaultRecurringAppointmentNumberGenerator"/>
+    </bean>
+
+    <bean id="appointmentServiceHelper" class="org.openmrs.module.appointments.helper.AppointmentServiceHelper"/>
+    <bean id="defaultTCApptMailSender" class="org.openmrs.module.appointments.notification.impl.DefaultMailSender">
+        <constructor-arg ref="adminService"/>
+    </bean>
+    <bean id="defaultPatientEmailNotifier" class="org.openmrs.module.appointments.notification.impl.DefaultTCAppointmentPatientEmailNotifier">
+        <constructor-arg ref="defaultTCApptMailSender"/>
+    </bean>
+
+<!--    <ref bean="defaultAppointmentMailSender"/>-->
+
+    <bean id="openmrsProperties" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="location" value="classpath:appointment.properties" />
+    </bean>
+
+
+
+    <bean id="patientAppointmentNotifierService" class="org.openmrs.module.appointments.service.impl.PatientAppointmentNotifierService">
+        <property name="eventNotifiers">
+            <list value-type="org.openmrs.module.appointments.notification.AppointmentEventNotifier">
+                <ref bean="defaultPatientEmailNotifier"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="defaultAppointmentStatusChangeValidator" class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentStatusChangeValidator"/>
+    <bean id="defaultAppointmentValidator" class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentValidator"/>
+
+    <bean id="specialityService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager">
+            <ref bean="transactionManager"/>
+        </property>
+        <property name="target">
+            <bean class="org.openmrs.module.appointments.service.impl.SpecialityServiceImpl">
+                <property name="specialityDao">
+                    <ref bean="specialityDao"/>
+                </property>
+            </bean>
+        </property>
+        <property name="preInterceptors">
+            <ref bean="serviceInterceptors"/>
+        </property>
+        <property name="transactionAttributeSource">
+            <ref bean="transactionAttributeSource"/>
+        </property>
+    </bean>
+
+    <bean id="specialityDao" class="org.openmrs.module.appointments.dao.impl.SpecialityDaoImpl">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+
+    <bean id="patientDoubleBookingConflict" class="org.openmrs.module.appointments.conflicts.impl.PatientDoubleBookingConflict">
+        <property name="appointmentDao" ref="appointmentDao"/>
+    </bean>
+
+    <bean id="teleconsultationAppointmentServiceImpl" class="org.openmrs.module.appointments.service.impl.TeleconsultationAppointmentService">
+        <property name="patientService">
+            <ref bean="patientService"/>
+        </property>
+
+        <property name="patientAppointmentNotifierService">
+            <ref bean="patientAppointmentNotifierService"/>
+        </property>
+    </bean>
+
+
+
+    <bean id="appointmentArgumentsMapper" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager">
+            <ref bean="transactionManager"/>
+        </property>
+        <property name="preInterceptors">
+            <ref bean="serviceInterceptors"/>
+        </property>
+        <property name="transactionAttributeSource">
+            <ref bean="transactionAttributeSource"/>
+        </property>
+        <property name="target">
+            <bean class="org.openmrs.module.appointments.service.impl.AppointmentArgumentsMapperImpl">
+            </bean>
+        </property>
+    </bean>
+    <bean parent="serviceContext">
+        <property name="moduleService">
+            <list>
+                <value>org.openmrs.module.appointments.service.AppointmentArgumentsMapper</value>
+                <ref bean="appointmentArgumentsMapper" />
+            </list>
+        </property>
+    </bean>
+    <bean id="appointmentsService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager">
+            <ref bean="transactionManager"/>
+        </property>
+        <property name="target">
+            <bean class="org.openmrs.module.appointments.service.impl.AppointmentsServiceImpl">
+                <property name="appointmentDao">
+                    <ref bean="appointmentDao"/>
+                </property>
+                <property name="appointmentAuditDao">
+                    <ref bean="appointmentAuditDao"/>
+                </property>
+                <property name="statusChangeValidators">
+                    <list>
+                        <bean class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentStatusChangeValidator"/>
+                    </list>
+                </property>
+                <property name="appointmentValidators">
+                    <list>
+                        <bean class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentValidator"/>
+                    </list>
+                </property>
+                <property name="editAppointmentValidators">
+                    <list>
+                        <ref bean="defaultEditAppointmentValidator"/>
+                    </list>
+                </property>
+                <property name="appointmentServiceHelper">
+                    <bean class="org.openmrs.module.appointments.helper.AppointmentServiceHelper"/>
+                </property>
+                <property name="appointmentConflicts">
+                    <list>
+                        <bean class="org.openmrs.module.appointments.conflicts.impl.AppointmentServiceUnavailabilityConflict"/>
+                        <ref bean="patientDoubleBookingConflict"/>
+                    </list>
+                </property>
+                <property name="teleconsultationAppointmentService">
+                    <ref bean="teleconsultationAppointmentServiceImpl"/>
+                </property>
+                <property name="appointmentNotifierService">
+                    <ref bean="patientAppointmentNotifierService"/>
+                </property>
+                <property name="appointmentNumberGeneratorLocator" ref="appointmentNumberGeneratorLocator"/>
+            </bean>
+        </property>
+        <property name="preInterceptors">
+            <ref bean="serviceInterceptors"/>
+        </property>
+        <property name="transactionAttributeSource">
+            <ref bean="transactionAttributeSource"/>
+        </property>
+    </bean>
+
+    <bean id="recurringAppointmentService"
+          class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager">
+            <ref bean="transactionManager"/>
+        </property>
+        <property name="target">
+            <bean class="org.openmrs.module.appointments.service.impl.AppointmentRecurringPatternServiceImpl">
+                <property name="appointmentRecurringPatternDao">
+                    <ref bean="appointmentRecurringPatternDao"/>
+                </property>
+                <property name="statusChangeValidators">
+                    <list>
+                        <bean class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentStatusChangeValidator"/>
+                    </list>
+                </property>
+                <property name="appointmentServiceHelper">
+                    <bean class="org.openmrs.module.appointments.helper.AppointmentServiceHelper"/>
+                </property>
+                <property name="appointmentValidators">
+                    <list>
+                        <bean class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentValidator"/>
+                    </list>
+                </property>
+                <property name="editAppointmentValidators">
+                    <list>
+                        <ref bean="defaultEditAppointmentValidator"/>
+                    </list>
+                </property>
+                <property name="appointmentDao">
+                    <ref bean="appointmentDao"/>
+                </property>
+                <property name="appointmentNumberGeneratorLocator" ref="appointmentNumberGeneratorLocator"/>
+            </bean>
+        </property>
+        <property name="preInterceptors">
+            <ref bean="serviceInterceptors"/>
+        </property>
+        <property name="transactionAttributeSource">
+            <ref bean="transactionAttributeSource"/>
+        </property>
+    </bean>
+
+    <bean id="appointmentDao" class="org.openmrs.module.appointments.dao.impl.AppointmentDaoImpl">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+
+    <bean id="defaultEditAppointmentValidator" class="org.openmrs.module.appointments.validator.impl.DefaultEditAppointmentValidator">
+        <property name="appointmentDao">
+            <ref bean="appointmentDao"/>
+        </property>
+    </bean>
+
+    <bean id="appointmentRecurringPatternDao" class="org.openmrs.module.appointments.dao.impl.AppointmentRecurringPatternDaoImpl">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+
+    <bean parent="serviceContext">
+        <property name="moduleService">
+            <list merge="true">
+                <value>org.openmrs.module.appointments.service.AppointmentsService</value>
+                <ref bean="appointmentsService"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean parent="serviceContext">
+        <property name="moduleService">
+            <list merge="true">
+                <value>org.openmrs.module.appointments.service.AppointmentRecurringPatternService</value>
+                <ref bean="recurringAppointmentService"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean parent="serviceContext">
+        <property name="moduleService">
+            <list merge="true">
+                <value>org.openmrs.module.appointments.service.AppointmentServiceDefinitionService</value>
+                <ref bean="appointmentServiceService"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean parent="serviceContext">
+        <property name="moduleService">
+            <list merge="true">
+                <value>org.openmrs.module.appointments.service.SpecialityService</value>
+                <ref bean="specialityService"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="appointmentServiceService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager">
+            <ref bean="transactionManager"/>
+        </property>
+        <property name="target">
+            <bean class="org.openmrs.module.appointments.service.impl.AppointmentServiceDefinitionServiceImpl">
+                <property name="appointmentServiceDao">
+                    <ref bean="appointmentServiceDao"/>
+                </property>
+                <property name="appointmentsService">
+                    <ref bean="appointmentsService"/>
+                </property>
+            </bean>
+        </property>
+        <property name="preInterceptors">
+            <ref bean="serviceInterceptors"/>
+        </property>
+        <property name="transactionAttributeSource">
+            <ref bean="transactionAttributeSource"/>
+        </property>
+    </bean>
+
+    <bean id="appointmentServiceDao" class="org.openmrs.module.appointments.dao.impl.AppointmentServiceDaoImpl">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+
+    <bean id="appointmentAuditDao" class="org.openmrs.module.appointments.dao.impl.AppointmentAuditDaoImpl">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+
+    <bean id="appointmentServiceAttributeTypeDao" class="org.openmrs.module.appointments.dao.impl.AppointmentServiceAttributeTypeDaoImpl">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+
+    <bean id="appointmentServiceAttributeTypeService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager">
+            <ref bean="transactionManager"/>
+        </property>
+        <property name="target">
+            <bean class="org.openmrs.module.appointments.service.impl.AppointmentServiceAttributeTypeServiceImpl">
+                <property name="appointmentServiceAttributeTypeDao">
+                    <ref bean="appointmentServiceAttributeTypeDao"/>
+                </property>
+            </bean>
+        </property>
+        <property name="preInterceptors">
+            <ref bean="serviceInterceptors"/>
+        </property>
+        <property name="transactionAttributeSource">
+            <ref bean="transactionAttributeSource"/>
+        </property>
+    </bean>
+
+    <bean parent="serviceContext">
+        <property name="moduleService">
+            <list merge="true">
+                <value>org.openmrs.module.appointments.service.AppointmentServiceAttributeTypeService</value>
+                <ref bean="appointmentServiceAttributeTypeService"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="appointmentUnavailabilityDao" class="org.openmrs.module.appointments.dao.impl.AppointmentUnavailabilityDaoImpl">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+
+    <bean id="appointmentUnavailabilityService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager">
+            <ref bean="transactionManager"/>
+        </property>
+        <property name="target">
+            <bean class="org.openmrs.module.appointments.service.impl.AppointmentUnavailabilityServiceImpl">
+                <constructor-arg ref="appointmentUnavailabilityDao"/>
+                <constructor-arg ref="appointmentServiceService"/>
+            </bean>
+        </property>
+        <property name="preInterceptors">
+            <ref bean="serviceInterceptors"/>
+        </property>
+        <property name="transactionAttributeSource">
+            <ref bean="transactionAttributeSource"/>
+        </property>
+    </bean>
+
+    <bean parent="serviceContext">
+        <property name="moduleService">
+            <list merge="true">
+                <value>org.openmrs.module.appointments.service.AppointmentUnavailabilityService</value>
+                <ref bean="appointmentUnavailabilityService"/>
+            </list>
+        </property>
+    </bean>
+
+</beans>

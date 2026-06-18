@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<module configVersion="1.4">
+
+	<!-- Base Module Properties -->
+	<id>${project.parent.artifactId}</id>
+	<name>${project.parent.name}</name>
+	<version>${project.parent.version}</version>
+	<package>${MODULE_PACKAGE}</package>
+	<author>Bahmni</author>
+	<description>${project.parent.description}</description>
+
+	<activator>org.openmrs.module.appointments.AppointmentsActivator</activator>
+
+	<require_modules>
+		<require_module>org.openmrs.module.webservices.rest</require_module>
+		<require_module>org.bahmni.module.teleconsultation</require_module>
+	</require_modules>
+
+	<aware_of_modules>
+		<aware_of_module version="${openmrsAtomfeedVersion}">org.ict4h.openmrs.openmrs-atomfeed</aware_of_module>
+		<aware_of_module version="${communications.version}">org.bahmni.module.communication</aware_of_module>
+		<aware_of_module version="${sms.module.version}">org.openmrs.module.sms</aware_of_module>
+	</aware_of_modules>
+
+	<conditional_resources>
+		<conditionalResource>
+			<path>/lib/appointments-atom-feed-${project.parent.version}.jar</path>
+			<modules>
+				<module>
+					<moduleId>org.ict4h.openmrs.openmrs-atomfeed</moduleId>
+					<version>${openmrsAtomfeedVersion}</version>
+				</module>
+			</modules>
+		</conditionalResource>
+	</conditional_resources>
+
+	<mappingFiles>
+		Speciality.hbm.xml
+		AppointmentServiceDefinition.hbm.xml
+		AppointmentServiceAttributeType.hbm.xml
+		AppointmentServiceAttribute.hbm.xml
+		ServiceWeeklyAvailability.hbm.xml
+		Appointment.hbm.xml
+		AppointmentAudit.hbm.xml
+		AppointmentServiceType.hbm.xml
+		AppointmentProvider.hbm.xml
+		AppointmentRecurringPattern.hbm.xml
+		AppointmentReason.hbm.xml
+		AppointmentUnavailability.hbm.xml
+	</mappingFiles>
+
+	<!-- Internationalization -->
+	<!-- All message codes should start with @MODULE_ID@.* -->
+	<messages>
+		<lang>en</lang>
+		<file>messages.properties</file>
+	</messages>
+	<messages>
+		<lang>fr</lang>
+		<file>messages_fr.properties</file>
+	</messages>
+	<messages>
+		<lang>es</lang>
+		<file>messages_es.properties</file>
+	</messages>
+	<!-- /Internationalization -->
+
+	<advice>
+		<point>org.openmrs.module.appointments.service.AppointmentsService</point>
+		<class>org.openmrs.module.appointments.events.advice.AppointmentEventsAdvice</class>
+	</advice>
+
+	<advice>
+		<point>org.openmrs.module.appointments.service.AppointmentsService</point>
+		<class>org.openmrs.module.appointments.events.advice.RescheduleEventsAdvice</class>
+	</advice>
+
+	<advice>
+		<point>org.openmrs.module.appointments.service.AppointmentRecurringPatternService</point>
+		<class>org.openmrs.module.appointments.events.advice.RecurringAppointmentEventsAdvice</class>
+	</advice>
+
+	<globalProperty>
+		<property>disableDefaultAppointmentValidations</property>
+		<defaultValue>false</defaultValue>
+		<description>Disable default appointment validations</description>
+	</globalProperty>
+	<globalProperty>
+		<property>SchedulerMarksComplete</property>
+		<defaultValue>false</defaultValue>
+		<description>Scheduler marks checked in appointments as complete when it turned on</description>
+	</globalProperty>
+	<globalProperty>
+		<property>SchedulerMarksMissed</property>
+		<defaultValue>false</defaultValue>
+		<description>Scheduler marks scheduled appointments as missed when it is turned on</description>
+	</globalProperty>
+	<globalProperty>
+	<property>SchedulerReminderBeforeHours</property>
+	<defaultValue>24</defaultValue>
+	<description>How many hours before the appointment should the reminder SMS be sent</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>bahmni.appointment.teleConsultation.patientEmailNotificationSubject</property>
+		<defaultValue>Teleconsultation appointment confirmed</defaultValue>
+		<description>Subject that will be used in the mail sent to patients for Teleconsultation</description>
+	</globalProperty>
+	<globalProperty>
+		<property>bahmni.appointment.teleConsultation.patientEmailNotificationTemplate</property>
+		<defaultValue>
+			Hi {0}, Your tele-consultation appointment with {1} for {2} has been scheduled! Please use this link {3}. If you have any questions, please reach out to administration for assistance. See you soon!
+		</defaultValue>
+		<description>Template to use while sending mail. Format is define like in Java MessageFormat</description>
+	</globalProperty>
+	<globalProperty>
+		<property>bahmni.appointment.teleConsultation.serverUrlPattern</property>
+		<defaultValue>https://meet.jit.si/{0}</defaultValue>
+		<description>Pattern of the URL for the meeting server. Notice the placeholder {0} for appointment UUID</description>
+	</globalProperty>
+	<globalProperty>
+		<property>bahmni.appointment.teleConsultation.sendEmail</property>
+		<defaultValue>false</defaultValue>
+		<description>Whether email should be sent for tele-consultation</description>
+	</globalProperty>
+	<globalProperty>
+		<property>bahmni.appointment.adhocTeleConsultation.patientEmailNotificationSubject</property>
+		<defaultValue>Teleconsultation started</defaultValue>
+		<description>Subject that will be used in the mail sent to patients for AdhocTeleconsultation</description>
+	</globalProperty>
+	<globalProperty>
+		<property>bahmni.appointment.adhocTeleConsultation.patientEmailNotificationTemplate</property>
+		<defaultValue>
+			Hi {0}, {1} has started a tele-consultation with you! Please use this link {2}. If you have any questions, please reach out to administration for assistance. See you soon!
+		</defaultValue>
+		<description>Template to use while sending mail for AdhocTeleconsultation. Format is define like in Java MessageFormat</description>
+	</globalProperty>
+	<globalProperty>
+		<property>bahmni.appointment.adhocTeleConsultation.bccEmails</property>
+		<defaultValue></defaultValue>
+		<description>BCC Emails for AdhocTeleconsultation</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>bahmni.adhoc.teleConsultation.id</property>
+		<defaultValue>Patient Identifier</defaultValue>
+		<description>Identifier type of patient to generate AdhocTeleconsultation link eg: 'Patient Identifier' or 'National ID' etc</description>
+	</globalProperty>
+
+	<globalProperty>
+		<property>sms.enableAppointmentBookingSMSAlert</property>
+		<defaultValue>false</defaultValue>
+	</globalProperty>
+
+	<globalProperty>
+		<property>sms.enableAppointmentReminderSMSAlert</property>
+		<defaultValue>false</defaultValue>
+	</globalProperty>
+
+
+	<globalProperty>
+		<property>sms.timezone</property>
+		<defaultValue>IST</defaultValue>
+	</globalProperty>
+
+	<globalProperty>
+		<property>sms.dateformat</property>
+		<defaultValue>dd-MM-yyyy' Time 'HH:mm</defaultValue>
+	</globalProperty>
+	<globalProperty>
+		<property>sms.enableAppointmentReschedulingSMSAlert</property>
+		<defaultValue>false</defaultValue>
+	</globalProperty>
+
+
+	<privilege>
+		<name>app:appointments:manageServiceAvailability</name>
+		<description>Able to Edit Appointment Service Availability in Appointments module</description>
+	</privilege>
+
+	<privilege>
+		<name>app:appointments:manageServices</name>
+		<description>Able to Manage Appointment Services in Appointments module</description>
+	</privilege>
+
+	<privilege>
+		<name>Add Appointment Unavailability</name>
+		<description>Able to add Appointment Unavailability blocks</description>
+	</privilege>
+
+	<privilege>
+		<name>Get Appointment Unavailability</name>
+		<description>Able to view Appointment Unavailability blocks</description>
+	</privilege>
+
+	<privilege>
+		<name>Delete Appointment Unavailability</name>
+		<description>Able to delete Appointment Unavailability blocks</description>
+	</privilege>
+
+
+</module>
