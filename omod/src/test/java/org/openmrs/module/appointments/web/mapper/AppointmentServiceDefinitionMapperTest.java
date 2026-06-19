@@ -22,6 +22,8 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+import org.openmrs.Provider;
+import org.openmrs.api.ProviderService;
 
 import java.sql.Time;
 import java.time.DayOfWeek;
@@ -50,6 +52,9 @@ public class AppointmentServiceDefinitionMapperTest {
 
     @InjectMocks
     private AppointmentServiceMapper appointmentServiceMapper;
+
+    @Mock
+    private ProviderService providerService;
 
     private Location location;
 
@@ -477,6 +482,73 @@ public class AppointmentServiceDefinitionMapperTest {
         assertEquals("Speciality", cardioService.getSpeciality().get("name"));
     }
 
+    @Test
+    public void shouldMapProviderUuidToAppointmentService() throws Exception {
+        Provider provider = new Provider();
+        provider.setUuid("provider-uuid");
+        provider.setName("Dr Smith");
+
+        when(providerService.getProviderByUuid("provider-uuid")).thenReturn(provider);
+        when(locationService.getLocationByUuid("locUuid")).thenReturn(location);
+        when(specialityService.getSpecialityByUuid("specUuid")).thenReturn(speciality);
+
+        AppointmentServiceDescription description = createAppointmentServicePayload();
+        description.setProviderUuid("provider-uuid");
+
+        AppointmentServiceDefinition result = appointmentServiceMapper.fromDescription(description);
+
+        assertEquals(provider, result.getProvider());
+    }
+
+    @Test
+    public void shouldIncludeProviderInDefaultResponse() throws Exception {
+        Provider provider = new Provider();
+        provider.setUuid("provider-uuid");
+        provider.setName("Dr Smith");
+
+        AppointmentServiceDefinition service = createAppointmentService(
+                "Cardiology-OPD", Time.valueOf("09:00:00"), Time.valueOf("17:00:00"), 30, 10);
+        service.setProvider(provider);
+
+        AppointmentServiceDefaultResponse response =
+                appointmentServiceMapper.constructDefaultResponse(service);
+
+        assertEquals("provider-uuid", response.getProvider().get("uuid"));
+        assertEquals("Dr Smith", response.getProvider().get("name"));
+    }
+
+    @Test
+    public void shouldMapMaxAppointmentsPerSlotFromPayload() throws Exception {
+        AppointmentServiceDescription description = createAppointmentServicePayload();
+        description.setMaxAppointmentsPerSlot(2);
+
+        ServiceWeeklyAvailabilityDescription monday = createServiceWeeklyAvailabilityDescription(
+                DayOfWeek.MONDAY, Time.valueOf("09:00:00"), Time.valueOf("15:00:00"), 12, null, false);
+        monday.setMaxAppointmentsPerSlot(3);
+        description.setWeeklyAvailability(Collections.singletonList(monday));
+
+        when(locationService.getLocationByUuid("locUuid")).thenReturn(location);
+        when(specialityService.getSpecialityByUuid("specUuid")).thenReturn(speciality);
+
+        AppointmentServiceDefinition result = appointmentServiceMapper.fromDescription(description);
+
+        assertEquals(Integer.valueOf(2), result.getMaxAppointmentsPerSlot());
+        ServiceWeeklyAvailability weekly = result.getWeeklyAvailability().iterator().next();
+        assertEquals(Integer.valueOf(3), weekly.getMaxAppointmentsPerSlot());
+    }
+
+    @Test
+    public void shouldIncludeMaxAppointmentsPerSlotInResponse() throws Exception {
+        AppointmentServiceDefinition service = createAppointmentService(
+                "Cardiology-OPD", Time.valueOf("09:00:00"), Time.valueOf("17:00:00"), 30, 12);
+        service.setMaxAppointmentsPerSlot(2);
+
+        AppointmentServiceDefaultResponse response =
+                appointmentServiceMapper.constructDefaultResponse(service);
+
+        assertEquals(Integer.valueOf(2), response.getMaxAppointmentsPerSlot());
+    }
+
     private AppointmentServiceDefinition createAppointmentService(String name, Time startTime, Time endTime, Integer duration,
                                                                   Integer maxAppointmentsLimit) {
         AppointmentServiceDefinition appointmentServiceDefinition = new AppointmentServiceDefinition();
@@ -510,6 +582,7 @@ public class AppointmentServiceDefinitionMapperTest {
         appointmentServiceDescription.setLocationUuid("locUuid");
         appointmentServiceDescription.setSpecialityUuid("specUuid");
         appointmentServiceDescription.setDescription("OPD ward for cardiology");
+        appointmentServiceDescription.setMaxAppointmentsPerSlot(2);
         return appointmentServiceDescription;
     }
 
@@ -521,6 +594,7 @@ public class AppointmentServiceDefinitionMapperTest {
         availabilityPayload.setMaxAppointmentsLimit(maxAppointmentsLimit);
         availabilityPayload.setUuid(uuid);
         availabilityPayload.setVoided(voided);
+        availabilityPayload.setMaxAppointmentsPerSlot(3);
         return availabilityPayload;
     }
 

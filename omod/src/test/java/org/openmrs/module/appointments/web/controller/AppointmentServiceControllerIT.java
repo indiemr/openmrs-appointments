@@ -848,4 +848,68 @@ public class AppointmentServiceControllerIT extends BaseIntegrationTest {
 
         assertEquals("Should include General Room1 service without speciality", true, hasGeneralService);
     }
+
+    @Test
+    public void should_createAppointmentServiceWithProvider() throws Exception {
+        String dataJson = "{\"name\":\"Dr Smith Consultation\",\"startTime\":\"09:00:00\"," +
+                "\"endTime\":\"15:00:00\"," +
+                "\"durationMins\":\"30\"," +
+                "\"locationUuid\":\"c36006e5-9fbb-4f20-866b-0ece245615a1\"," +
+                "\"specialityUuid\":\"c36006e5-9fbb-4f20-866b-0ece245615a1\"," +
+                "\"providerUuid\":\"2bdc3f7d-d911-401a-84e9-5494dda83e8e\"" +
+                "}";
+
+        MockHttpServletResponse handle = handle(newPostRequest("/rest/v1/appointmentService", dataJson));
+        SimpleObject asResponse = SimpleObject.parseJson(handle.getContentAsString());
+
+        assertNotNull(asResponse);
+        LinkedHashMap provider = (LinkedHashMap) asResponse.get("provider");
+        assertNotNull(provider);
+        assertEquals("2bdc3f7d-d911-401a-84e9-5494dda83e8e", provider.get("uuid"));
+        assertEquals("Dr Smith", provider.get("name"));
+    }
+
+    @Test
+    public void should_createAppointmentServiceWithoutProvider_forBackwardCompatibility() throws Exception {
+        String dataJson = "{\"name\":\"General Consultation\"}";
+
+        MockHttpServletResponse handle = handle(newPostRequest("/rest/v1/appointmentService", dataJson));
+        SimpleObject asResponse = SimpleObject.parseJson(handle.getContentAsString());
+
+        assertNotNull(asResponse);
+        assertNull(asResponse.get("provider"));
+    }
+
+    @Test
+    public void should_createAppointmentServiceWithMaxAppointmentsPerSlot() throws Exception {
+        String dataJson = "{\"name\":\"Dr B Consultation\",\"startTime\":\"09:00:00\"," +
+                "\"endTime\":\"15:00:00\"," +
+                "\"durationMins\":\"30\"," +
+                "\"locationUuid\":\"c36006e5-9fbb-4f20-866b-0ece245615a1\"," +
+                "\"specialityUuid\":\"c36006e5-9fbb-4f20-866b-0ece245615a1\"," +
+                "\"maxAppointmentsPerSlot\":\"2\"," +
+                "\"weeklyAvailability\": [{ " +
+                "\"dayOfWeek\": \"MONDAY\", \"startTime\":\"09:00:00\", \"endTime\":\"15:00:00\", " +
+                "\"maxAppointmentsLimit\":\"24\", \"maxAppointmentsPerSlot\":\"3\" }]" +
+                "}";
+
+        MockHttpServletResponse handle = handle(newPostRequest("/rest/v1/appointmentService", dataJson));
+        SimpleObject asResponse = SimpleObject.parseJson(handle.getContentAsString());
+
+        assertEquals(2, (int) asResponse.get("maxAppointmentsPerSlot"));
+
+        ArrayList weeklyAvailabilities = (ArrayList) asResponse.get("weeklyAvailability");
+        LinkedHashMap weekly = (LinkedHashMap) weeklyAvailabilities.get(0);
+        assertEquals(3, weekly.get("maxAppointmentsPerSlot"));
+    }
+
+    @Test
+    public void should_createAppointmentServiceWithoutMaxAppointmentsPerSlot_forBackwardCompatibility() throws Exception {
+        String dataJson = "{\"name\":\"Legacy Consultation\"}";
+
+        MockHttpServletResponse handle = handle(newPostRequest("/rest/v1/appointmentService", dataJson));
+        SimpleObject asResponse = SimpleObject.parseJson(handle.getContentAsString());
+
+        assertNull(asResponse.get("maxAppointmentsPerSlot"));
+    }
 }

@@ -17,12 +17,30 @@ public class AppointmentServiceDescription {
     private Integer maxAppointmentsLimit;
     private Integer durationMins;
     private String locationUuid;
+    private String providerUuid;
     private String uuid;
     private String color;
     private String initialAppointmentStatus;
     private List<ServiceWeeklyAvailabilityDescription> weeklyAvailability;
     private Set<AppointmentServiceTypeDescription> serviceTypes;
     private Set<AppointmentServiceAttributeDescription> attributes;
+    private Integer maxAppointmentsPerSlot;
+
+    public Integer getMaxAppointmentsPerSlot() {
+        return maxAppointmentsPerSlot;
+    }
+
+    public void setMaxAppointmentsPerSlot(Integer maxAppointmentsPerSlot) {
+        this.maxAppointmentsPerSlot = maxAppointmentsPerSlot;
+    }
+
+    public String getProviderUuid() {
+        return providerUuid;
+    }
+
+    public void setProviderUuid(String providerUuid) {
+        this.providerUuid = providerUuid;
+    }
 
     public Set<AppointmentServiceTypeDescription> getServiceTypes() {
         return serviceTypes;

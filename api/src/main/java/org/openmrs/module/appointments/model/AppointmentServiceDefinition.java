@@ -2,6 +2,7 @@ package org.openmrs.module.appointments.model;
 
 import org.openmrs.BaseOpenmrsData;
 import org.openmrs.Location;
+import org.openmrs.Provider;
 import org.openmrs.customdatatype.Customizable;
 import org.openmrs.customdatatype.CustomValueDescriptor;
 
@@ -21,11 +22,13 @@ public class AppointmentServiceDefinition extends BaseOpenmrsData implements Ser
     private String name;
     private String description;
     private Speciality speciality;
+    private Integer maxAppointmentsPerSlot;
     private Time startTime;
     private Time endTime;
     private Integer maxAppointmentsLimit;
     private Integer durationMins;
     private Location location;
+    private Provider provider;
     private String  color;
     private AppointmentStatus initialAppointmentStatus;
     private Set<ServiceWeeklyAvailability> weeklyAvailability;
@@ -38,6 +41,14 @@ public class AppointmentServiceDefinition extends BaseOpenmrsData implements Ser
 
     public void setLocation(Location location) {
         this.location = location;
+    }
+
+    public Provider getProvider() {
+        return provider;
+    }
+
+    public void setProvider(Provider provider) {
+        this.provider = provider;
     }
 
     public Integer getDurationMins() {
@@ -54,6 +65,14 @@ public class AppointmentServiceDefinition extends BaseOpenmrsData implements Ser
 
     public void setMaxAppointmentsLimit(Integer maxAppointmentsLimit) {
         this.maxAppointmentsLimit = maxAppointmentsLimit;
+    }
+
+    public Integer getMaxAppointmentsPerSlot() {
+        return maxAppointmentsPerSlot;
+    }
+
+    public void setMaxAppointmentsPerSlot(Integer maxAppointmentsPerSlot) {
+        this.maxAppointmentsPerSlot = maxAppointmentsPerSlot;
     }
 
     public Time getEndTime() {

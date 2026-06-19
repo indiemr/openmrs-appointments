@@ -13,11 +13,29 @@ public class AppointmentServiceDefaultResponse {
 	private Integer maxAppointmentsLimit;
 	private Integer durationMins;
 	private Map location;
+	private Map provider;
 	private String uuid;
 	private String color;
 	private String initialAppointmentStatus;
 	private String creatorName;
 	private List<AppointmentServiceAttributeResponse> attributes;
+	private Integer maxAppointmentsPerSlot;
+
+	public Integer getMaxAppointmentsPerSlot() {
+        return maxAppointmentsPerSlot;
+    }
+
+    public void setMaxAppointmentsPerSlot(Integer maxAppointmentsPerSlot) {
+        this.maxAppointmentsPerSlot = maxAppointmentsPerSlot;
+    }
+
+	public Map getProvider() {
+        return provider;
+    }
+
+    public void setProvider(Map provider) {
+        this.provider = provider;
+    }
 
 	public Integer getAppointmentServiceId() {
 		return appointmentServiceId;
