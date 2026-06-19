@@ -52,8 +52,8 @@ public class AppointmentArgumentsMapperImpl implements AppointmentArgumentsMappe
     public Map<String, String> createArgumentsMapForAppointmentBooking(Appointment appointment) {
         Map<String, String> arguments = new HashMap<>();
         Patient patient = Context.getPatientService().getPatientByUuid(appointment.getPatient().getUuid());
-        String givenName = patient.getGivenName();
-        String familyName = patient.getFamilyName();
+        String givenName = patient.getGivenName() != null ? patient.getGivenName() : "";
+        String familyName = patient.getFamilyName() != null ? patient.getFamilyName() : "";
         String identifier = patient.getPatientIdentifier().getIdentifier();
         Date appointmentDate = appointment.getStartDateTime();
         String appointmentKind = appointment.getAppointmentKind().getValue();
