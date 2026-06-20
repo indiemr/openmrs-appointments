@@ -41,4 +41,11 @@ public interface AppointmentDao {
     List<Appointment> getAppointmentsWithoutDates(AppointmentSearchRequestModel searchQuery, Integer limit);
 
     List<Appointment> getAppointmentsByUuids(List<String> uuids);
+
+    int countOverlappingAppointmentsForService(AppointmentServiceDefinition service,
+        org.openmrs.Provider provider,
+        Date slotStart,
+        Date slotEnd,
+        String excludeAppointmentUuid,
+        List<AppointmentStatus> statuses);
 }

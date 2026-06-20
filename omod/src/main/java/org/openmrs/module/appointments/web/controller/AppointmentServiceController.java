@@ -3,11 +3,14 @@ package org.openmrs.module.appointments.web.controller;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.model.AppointmentServiceSearchParams;
 import org.openmrs.module.appointments.service.AppointmentServiceDefinitionService;
+import org.openmrs.module.appointments.service.AppointmentSlotAvailabilityService;
 import org.openmrs.module.appointments.util.DateUtil;
 import org.openmrs.module.appointments.web.contract.AppointmentServiceDefaultResponse;
 import org.openmrs.module.appointments.web.contract.AppointmentServiceDescription;
 import org.openmrs.module.appointments.web.contract.AppointmentServiceFullResponse;
+import org.openmrs.module.appointments.web.contract.AppointmentSlotAvailabilityResponse;
 import org.openmrs.module.appointments.web.mapper.AppointmentServiceMapper;
+import org.openmrs.module.appointments.web.mapper.AppointmentSlotAvailabilityMapper;
 import org.openmrs.module.webservices.rest.web.RestConstants;
 import org.openmrs.module.webservices.rest.web.v1_0.controller.BaseRestController;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +22,13 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.io.IOException;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 @Controller
 @RequestMapping(value = "/rest/" + RestConstants.VERSION_1 + "/appointmentService")
@@ -29,6 +38,24 @@ public class AppointmentServiceController extends BaseRestController {
     private AppointmentServiceDefinitionService appointmentServiceDefinitionService;
     @Autowired
     private AppointmentServiceMapper appointmentServiceMapper;
+
+    @Autowired
+    private AppointmentSlotAvailabilityService appointmentSlotAvailabilityService;
+
+    @Autowired
+    private AppointmentSlotAvailabilityMapper appointmentSlotAvailabilityMapper;
+
+    @RequestMapping(method = RequestMethod.GET, value = "availableSlots")
+    @ResponseBody
+    public List<AppointmentSlotAvailabilityResponse> getAvailableSlots
+        (@RequestParam("uuid") String serviceUuid, @RequestParam("date") String date,@RequestParam(value = "excludeAppointmentUuid", required = false) String excludeAppointmentUuid) throws ParseException {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        Date appointmentDate = dateFormat.parse(date);
+        return appointmentSlotAvailabilityMapper.constructResponse(
+                appointmentSlotAvailabilityService.getAvailableSlots(serviceUuid, appointmentDate, excludeAppointmentUuid)
+        );
+    }
+    
 
     @RequestMapping(method = RequestMethod.GET, value = "all/default")
     @ResponseBody

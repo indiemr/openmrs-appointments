@@ -112,6 +112,13 @@
 				<property name="appointmentValidators">
 					<list>
 						<bean class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentValidator"/>
+						<ref bean="appointmentSlotCapacityValidator"/>
+					</list>
+				</property>
+				<property name="editAppointmentValidators">
+					<list>
+						<ref bean="defaultEditAppointmentValidator"/>
+						<ref bean="appointmentSlotCapacityValidator"/>
 					</list>
 				</property>
                 <property name="appointmentServiceHelper">
@@ -233,5 +240,34 @@
             </list>
         </property>
     </bean>
+
+	<bean id="defaultEditAppointmentValidator" class="org.openmrs.module.appointments.validator.impl.DefaultEditAppointmentValidator">
+		<property name="appointmentDao" ref="appointmentDao"/>
+	</bean>
+
+	<bean id="appointmentSlotAvailabilityService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+		<property name="transactionManager" ref="transactionManager"/>
+		<property name="target">
+			<bean class="org.openmrs.module.appointments.service.impl.AppointmentSlotAvailabilityServiceImpl">
+				<property name="appointmentServiceDefinitionService" ref="appointmentServiceService"/>
+				<property name="appointmentDao" ref="appointmentDao"/>
+			</bean>
+		</property>
+		<property name="preInterceptors" ref="serviceInterceptors"/>
+		<property name="transactionAttributeSource" ref="transactionAttributeSource"/>
+	</bean>
+
+	<bean id="appointmentSlotCapacityValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentSlotCapacityValidator">
+		<property name="appointmentSlotAvailabilityService" ref="appointmentSlotAvailabilityService"/>
+	</bean>
+
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list merge="true">
+				<value>org.openmrs.module.appointments.service.AppointmentSlotAvailabilityService</value>
+				<ref bean="appointmentSlotAvailabilityService"/>
+			</list>
+		</property>
+	</bean>
 
 </beans>

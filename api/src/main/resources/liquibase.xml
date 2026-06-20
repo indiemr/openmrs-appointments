@@ -1030,7 +1030,7 @@
         </preConditions>
         <comment>Max patients or appointments per slot at service level (default)</comment>
         <addColumn tableName="appointment_service">
-            <column name="max_appointments_per_slot" type="init">
+            <column name="max_appointments_per_slot" type="int">
                 <constraints nullable="true" />
             </column>
         </addColumn>
@@ -1044,7 +1044,7 @@
         </preConditions>
         <comment>Per-day override for max patients per time slot</comment>
         <addColumn tableName="appointment_service_weekly_availability">
-            <column name="max_appointments_per_slot" type="init">
+            <column name="max_appointments_per_slot" type="int">
                 <constraints nullable="true" />
             </column>
         </addColumn>

@@ -6,9 +6,11 @@ import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Example;
 
 import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.Disjunction;
 import org.hibernate.sql.JoinType;
+import org.openmrs.Provider;
 import org.openmrs.module.appointments.dao.AppointmentDao;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentSearchRequestModel;
@@ -181,6 +183,39 @@ public class AppointmentDaoImpl implements AppointmentDao {
 
 
         return criteria.list();
+    }
+
+    @Override
+    public int countOverlappingAppointmentsForService
+    (AppointmentServiceDefinition appointmentServiceDefinition, Provider provider, Date slotStart,
+    Date slotEnd, String excludeAppointmentUuid, List<AppointmentStatus> appointmentStatusFilterList) {
+        Criteria criteria = sessionFactory.getCurrentSession().createCriteria(Appointment.class, "appointment");
+        criteria.add(Restrictions.eq("voided", false));
+        criteria.createAlias("patient", "patient");
+        criteria.add(Restrictions.eq("patient.voided", false));
+        criteria.add(Restrictions.eq("patient.personVoided", false));
+        criteria.createAlias("service", "service");
+        criteria.add(Restrictions.eq("service.appointmentServiceId", appointmentServiceDefinition.getAppointmentServiceId()));
+        criteria.add(Restrictions.lt("startDateTime", slotEnd));
+        criteria.add(Restrictions.gt("endDateTime", slotStart));
+        if (appointmentStatusFilterList != null && !appointmentStatusFilterList.isEmpty()) {
+            criteria.add(Restrictions.in("status", appointmentStatusFilterList));
+        }
+        if (provider != null) {
+            criteria.createAlias("providers", "appointmentProvider");
+            criteria.createAlias("appointmentProvider.provider", "provider");
+            criteria.add(Restrictions.eq("provider.providerId", provider.getProviderId()));
+            criteria.add(Restrictions.or(
+                    Restrictions.isNull("appointmentProvider.voided"),
+                    Restrictions.eq("appointmentProvider.voided", false)
+            ));
+        }
+        if (StringUtils.isNotBlank(excludeAppointmentUuid)) {
+            criteria.add(Restrictions.ne("uuid", excludeAppointmentUuid));
+        }
+        criteria.setProjection(Projections.countDistinct("appointmentId"));
+        Number count = (Number) criteria.uniqueResult();
+        return count != null ? count.intValue() : 0;
     }
 
     private void setProviderCriteria(AppointmentSearchRequest appointmentSearchRequest, Criteria criteria) {
