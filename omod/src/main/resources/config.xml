@@ -86,20 +86,23 @@
 		<defaultValue>false</defaultValue>
 		<description>Disable default appointment validations</description>
 	</globalProperty>
+
 	<globalProperty>
 		<property>SchedulerMarksComplete</property>
 		<defaultValue>false</defaultValue>
 		<description>Scheduler marks checked in appointments as complete when it turned on</description>
 	</globalProperty>
+
 	<globalProperty>
 		<property>SchedulerMarksMissed</property>
 		<defaultValue>false</defaultValue>
 		<description>Scheduler marks scheduled appointments as missed when it is turned on</description>
 	</globalProperty>
+
 	<globalProperty>
-	<property>SchedulerReminderBeforeHours</property>
-	<defaultValue>24</defaultValue>
-	<description>How many hours before the appointment should the reminder SMS be sent</description>
+		<property>SchedulerReminderBeforeHours</property>
+		<defaultValue>24</defaultValue>
+		<description>How many hours before the appointment should the reminder SMS be sent</description>
 	</globalProperty>
 
 	<globalProperty>
@@ -182,6 +185,12 @@
 		<property>appointments.defaultSlotDurationMinutes</property>
 		<defaultValue>15</defaultValue>
 		<description>Default appointment slot duration in minutes when service/service type duration is not configured</description>
+	</globalProperty>
+	
+	<globalProperty>
+		<property>sms.enableTeleconsultationSMSAlert</property>
+		<defaultValue>false</defaultValue>
+		<description>Send SMS when a virtual (teleconsultation) appointment is booked/updated/rescheduled</description>
 	</globalProperty>
 
 
