@@ -79,13 +79,7 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
         Date slotStart = appointment.getStartDateTime();
         Date slotEnd = AppointmentServiceCapacityUtil.resolveAppointmentEndDateTime(appointment);
         Provider provider = service.getProvider();
-        int booked = appointmentDao.countOverlappingAppointmentsForService(
-                service,
-                provider,
-                slotStart,
-                slotEnd,
-                appointment.getUuid(),
-                AppointmentServiceCapacityUtil.OCCUPYING_STATUSES);
+        int booked = countBookedAppointments(service, provider, slotStart, slotEnd, appointment.getUuid());
         return booked >= capacity;
     }
 
@@ -113,8 +107,7 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
                 slot.setBooked(null);
                 slot.setAvailable(null);
             } else {
-                int booked = appointmentDao.countOverlappingAppointmentsForService(service, provider, s, e,
-                        excludeAppointmentUuid, AppointmentServiceCapacityUtil.OCCUPYING_STATUSES);
+                int booked = countBookedAppointments(service, provider, s, e, excludeAppointmentUuid);
                 slot.setBooked(booked);
                 slot.setAvailable(Math.max(capacity - booked, 0));
             }
@@ -122,6 +115,14 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
         }
 
         return slots;
+    }
+
+    private int countBookedAppointments(AppointmentServiceDefinition service, Provider provider, Date slotStart, Date slotEnd, String excludeAppointmentUuid) {
+        List<AppointmentStatus> statuses = AppointmentServiceCapacityUtil.OCCUPYING_STATUSES;
+        if (provider != null) {
+            return appointmentDao.countOverlappingAppointmentsForProvider(provider, slotStart, slotEnd, excludeAppointmentUuid, statuses);
+        }
+        return appointmentDao.countOverlappingAppointmentsForService(service, provider, slotStart, slotEnd, excludeAppointmentUuid, statuses);
     }
 
     private ServiceWeeklyAvailability resolveWeeklyAvailabilityForAppointment(AppointmentServiceDefinition service,

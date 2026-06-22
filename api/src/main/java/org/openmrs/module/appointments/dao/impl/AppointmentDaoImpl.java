@@ -201,15 +201,15 @@ public class AppointmentDaoImpl implements AppointmentDao {
         if (appointmentStatusFilterList != null && !appointmentStatusFilterList.isEmpty()) {
             criteria.add(Restrictions.in("status", appointmentStatusFilterList));
         }
-        if (provider != null) {
-            criteria.createAlias("providers", "appointmentProvider");
-            criteria.createAlias("appointmentProvider.provider", "provider");
-            criteria.add(Restrictions.eq("provider.providerId", provider.getProviderId()));
-            criteria.add(Restrictions.or(
-                    Restrictions.isNull("appointmentProvider.voided"),
-                    Restrictions.eq("appointmentProvider.voided", false)
-            ));
-        }
+        // if (provider != null) {
+        //     criteria.createAlias("providers", "appointmentProvider");
+        //     criteria.createAlias("appointmentProvider.provider", "provider");
+        //     criteria.add(Restrictions.eq("provider.providerId", provider.getProviderId()));
+        //     criteria.add(Restrictions.or(
+        //             Restrictions.isNull("appointmentProvider.voided"),
+        //             Restrictions.eq("appointmentProvider.voided", false)
+        //     ));
+        // }
         if (StringUtils.isNotBlank(excludeAppointmentUuid)) {
             criteria.add(Restrictions.ne("uuid", excludeAppointmentUuid));
         }
@@ -217,6 +217,62 @@ public class AppointmentDaoImpl implements AppointmentDao {
         Number count = (Number) criteria.uniqueResult();
         return count != null ? count.intValue() : 0;
     }
+
+    @Override
+    public int countOverlappingAppointmentsForProvider(Provider provider,
+        Date slotStart,
+        Date slotEnd,
+        String excludeAppointmentUuid,
+        List<AppointmentStatus> appointmentStatusFilterList) 
+        {
+            if (provider == null) {
+                return 0;
+            }
+
+            Criteria criteria = sessionFactory.getCurrentSession().createCriteria(Appointment.class, "appointment");
+            criteria.add(Restrictions.eq("voided", false));
+            criteria.createAlias("patient", "patient");
+            criteria.add(Restrictions.eq("patient.voided", false));
+            criteria.add(Restrictions.eq("patient.personVoided", false));
+
+            criteria.createAlias("service", "service");
+            criteria.createAlias("service.provider", "linkedServiceProvider", JoinType.LEFT_OUTER_JOIN);
+            criteria.createAlias("providers", "appointmentProvider", JoinType.LEFT_OUTER_JOIN);
+            criteria.createAlias("appointmentProvider.provider", "apptProvider", JoinType.LEFT_OUTER_JOIN);
+
+            criteria.add(Restrictions.lt("startDateTime", slotEnd));
+            criteria.add(Restrictions.gt("endDateTime", slotStart));
+
+            if (appointmentStatusFilterList != null && !appointmentStatusFilterList.isEmpty()) {
+                criteria.add(Restrictions.in("status", appointmentStatusFilterList));
+            }
+
+            Integer providerId = provider.getProviderId();
+            Disjunction providerMatch = Restrictions.disjunction();
+
+            // Appointment on any service owned by this doctor
+            providerMatch.add(Restrictions.eq("linkedServiceProvider.providerId", providerId));
+
+            // OR appointment explicitly assigned this doctor
+            providerMatch.add(Restrictions.and(
+                Restrictions.eq("apptProvider.providerId", providerId),
+                Restrictions.or(
+                    Restrictions.isNull("appointmentProvider.voided"),
+                    Restrictions.eq("appointmentProvider.voided", false)
+            )));
+
+            criteria.add(providerMatch);
+
+            if (StringUtils.isNotBlank(excludeAppointmentUuid)) {
+                criteria.add(Restrictions.ne("uuid", excludeAppointmentUuid));
+            }
+
+
+            criteria.setProjection(Projections.countDistinct("appointmentId"));
+            Number count = (Number) criteria.uniqueResult();
+            return count != null ? count.intValue() : 0;
+        }
+    
 
     private void setProviderCriteria(AppointmentSearchRequest appointmentSearchRequest, Criteria criteria) {
         if (StringUtils.isNotEmpty(appointmentSearchRequest.getProviderUuid())) {

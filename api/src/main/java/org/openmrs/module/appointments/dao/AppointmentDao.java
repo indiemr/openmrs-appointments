@@ -2,7 +2,7 @@ package org.openmrs.module.appointments.dao;
 
 import java.util.Date;
 
-
+import org.openmrs.Provider;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentSearchRequestModel;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
@@ -43,7 +43,13 @@ public interface AppointmentDao {
     List<Appointment> getAppointmentsByUuids(List<String> uuids);
 
     int countOverlappingAppointmentsForService(AppointmentServiceDefinition service,
-        org.openmrs.Provider provider,
+        Provider provider,
+        Date slotStart,
+        Date slotEnd,
+        String excludeAppointmentUuid,
+        List<AppointmentStatus> statuses);
+
+    int countOverlappingAppointmentsForProvider(Provider provider,
         Date slotStart,
         Date slotEnd,
         String excludeAppointmentUuid,
