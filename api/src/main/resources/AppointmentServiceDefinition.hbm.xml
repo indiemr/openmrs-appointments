@@ -51,5 +51,6 @@
             <one-to-many class="org.openmrs.module.appointments.model.AppointmentServiceAttribute"/>
         </set>
         <property name="bookAheadDays" type="java.lang.Integer" column="book_ahead_days" />
+        <property name="leadTimeMinutes" type="java.lang.Integer" column="lead_time_minutes" />
     </class>
 </hibernate-mapping>

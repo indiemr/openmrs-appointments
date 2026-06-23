@@ -21,6 +21,7 @@ public class AppointmentServiceDefaultResponse {
 	private List<AppointmentServiceAttributeResponse> attributes;
 	private Integer maxAppointmentsPerSlot;
 	private Integer bookAheadDays;
+	private Integer leadTimeMinutes;
 
 	public Integer getBookAheadDays() {
 		return bookAheadDays;
@@ -28,6 +29,14 @@ public class AppointmentServiceDefaultResponse {
 
 	public void setBookAheadDays(Integer bookAheadDays) {
 		this.bookAheadDays = bookAheadDays;
+	}
+
+	public Integer getLeadTimeMinutes() {
+		return leadTimeMinutes;
+	}
+
+	public void setLeadTimeMinutes(Integer leadTimeMinutes) {
+		this.leadTimeMinutes = leadTimeMinutes;
 	}
 
 	public Integer getMaxAppointmentsPerSlot() {

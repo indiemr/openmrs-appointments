@@ -143,6 +143,9 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
             AppointmentSlotAvailability slot = new AppointmentSlotAvailability();
             Date s = window[0];
             Date e = window[1];
+            if (!AppointmentBookingRulesUtil.isSlotOutsideLeadTime(service, s)) {
+                continue;
+            }
             slot.setStartDateTime(s);
             slot.setEndDateTime(e);
             slot.setCapacity(capacity);

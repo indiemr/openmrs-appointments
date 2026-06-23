@@ -113,6 +113,7 @@
 					<list>
 						<bean class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentValidator"/>
 						<ref bean="appointmentBookingWindowValidator"/>
+						<ref bean="appointmentLeadTimeValidator"/>
 						<ref bean="appointmentSlotCapacityValidator"/>
 					</list>
 				</property>
@@ -120,6 +121,7 @@
 					<list>
 						<ref bean="defaultEditAppointmentValidator"/>
 						<ref bean="appointmentBookingWindowValidator"/>
+						<ref bean="appointmentLeadTimeValidator"/>
 						<ref bean="appointmentSlotCapacityValidator"/>
 					</list>
 				</property>
@@ -279,4 +281,5 @@
 	</bean>
 
 	<bean id="appointmentBookingWindowValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentBookingWindowValidator"/>
+	<bean id="appointmentLeadTimeValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentLeadTimeValidator"/>
 </beans>

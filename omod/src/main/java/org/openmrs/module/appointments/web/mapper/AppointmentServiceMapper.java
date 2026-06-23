@@ -107,6 +107,9 @@ public class AppointmentServiceMapper {
         AppointmentBookingRulesUtil.validateBookAheadDays(appointmentServiceDescription.getBookAheadDays());
         appointmentServiceDefinition.setBookAheadDays(appointmentServiceDescription.getBookAheadDays());
 
+        AppointmentBookingRulesUtil.validateLeadTimeMinutes(appointmentServiceDescription.getLeadTimeMinutes());
+        appointmentServiceDefinition.setLeadTimeMinutes(appointmentServiceDescription.getLeadTimeMinutes());
+
         return appointmentServiceDefinition;
     }
 
@@ -271,6 +274,7 @@ public class AppointmentServiceMapper {
         asResponse.setColor(as.getColor());
         asResponse.setMaxAppointmentsPerSlot(as.getMaxAppointmentsPerSlot());
         asResponse.setBookAheadDays(as.getBookAheadDays());
+        asResponse.setLeadTimeMinutes(as.getLeadTimeMinutes());
 
         AppointmentStatus initialAppointmentStatus = as.getInitialAppointmentStatus();
         if (null != initialAppointmentStatus){

@@ -1063,4 +1063,18 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="add_lead_time_to_appointment_service" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_service" columnName="lead_time_minutes" />
+            </not>
+        </preConditions>
+        <comment>Patient should book appointment in advance before the lead time minutes</comment>
+        <addColumn tableName="appointment_service">
+            <column name="lead_time_minutes" type="int">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

@@ -35,6 +35,7 @@ public class AppointmentServiceDefinition extends BaseOpenmrsData implements Ser
     private Set<AppointmentServiceType> serviceTypes;
     private Set<AppointmentServiceAttribute> attributes;
     private Integer bookAheadDays;
+    private Integer leadTimeMinutes;
 
     public Location getLocation() {
         return location;
@@ -119,8 +120,17 @@ public class AppointmentServiceDefinition extends BaseOpenmrsData implements Ser
     public Integer getBookAheadDays() {
         return bookAheadDays;
     }
+
     public void setBookAheadDays(Integer bookAheadDays) {
         this.bookAheadDays = bookAheadDays;
+    }
+
+    public Integer getLeadTimeMinutes() {
+        return leadTimeMinutes;
+    }
+    
+    public void setLeadTimeMinutes(Integer leadTimeMinutes) {
+        this.leadTimeMinutes = leadTimeMinutes;
     }
 
     @Override
