@@ -167,6 +167,7 @@
                     <list>
                         <bean class="org.openmrs.module.appointments.conflicts.impl.AppointmentServiceUnavailabilityConflict"/>
                         <ref bean="patientDoubleBookingConflict"/>
+                        <ref bean="appointmentUnavailabilityConflict"/>
                     </list>
                 </property>
                 <property name="teleconsultationAppointmentService">
@@ -389,12 +390,17 @@
         <property name="transactionManager" ref="transactionManager"/>
         <property name="target">
             <bean class="org.openmrs.module.appointments.service.impl.AppointmentSlotAvailabilityServiceImpl">
-                <property name="appointmentServiceDefinitionService" ref="appointmentServiceService"/>
+                <property name="appointmentServiceDao" ref="appointmentServiceDao"/>
                 <property name="appointmentDao" ref="appointmentDao"/>
+                <property name="appointmentUnavailabilityDao" ref="appointmentUnavailabilityDao"/>
             </bean>
         </property>
         <property name="preInterceptors" ref="serviceInterceptors"/>
         <property name="transactionAttributeSource" ref="transactionAttributeSource"/>
+    </bean>
+
+    <bean id="appointmentUnavailabilityConflict" class="org.openmrs.module.appointments.conflicts.impl.AppointmentUnavailabilityConflict">
+        <property name="appointmentSlotAvailabilityService" ref="appointmentSlotAvailabilityService"/>
     </bean>
 
     <bean id="appointmentSlotCapacityValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentSlotCapacityValidator">

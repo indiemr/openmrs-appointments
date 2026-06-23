@@ -8,6 +8,7 @@ public class AppointmentSlotAvailability {
     private Integer capacity;
     private Integer booked;
     private Integer available;
+    private Boolean blocked;
 
     public Date getStartDateTime() { return startDateTime; }
     public void setStartDateTime(Date startDateTime) { this.startDateTime = startDateTime; }
@@ -19,4 +20,6 @@ public class AppointmentSlotAvailability {
     public void setBooked(Integer booked) { this.booked = booked; }
     public Integer getAvailable() { return available; }
     public void setAvailable(Integer available) { this.available = available; }
+    public Boolean getBlocked() { return blocked; }
+    public void setBlocked(Boolean blocked) { this.blocked = blocked; }
 }

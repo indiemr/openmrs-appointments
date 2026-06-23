@@ -19,4 +19,7 @@ public interface AppointmentSlotAvailabilityService {
 
     @Transactional(readOnly = true)
     boolean isSlotCapacityExceeded(Appointment appointment);
+
+    @Transactional(readOnly = true)
+    boolean isSlotBlocked(Appointment appointment);
 }

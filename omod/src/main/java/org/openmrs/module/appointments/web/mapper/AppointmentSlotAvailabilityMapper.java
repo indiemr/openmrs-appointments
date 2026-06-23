@@ -24,6 +24,7 @@ public class AppointmentSlotAvailabilityMapper {
         response.setCapacity(slot.getCapacity());
         response.setBooked(slot.getBooked());
         response.setAvailable(slot.getAvailable());
+        response.setBlocked(slot.getBlocked());
         return response;
     }
 }

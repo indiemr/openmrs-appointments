@@ -22,6 +22,10 @@ public class AppointmentSlotCapacityValidator implements AppointmentValidator {
         if (AppointmentStatus.Cancelled.equals(appointment.getStatus())) {
             return;
         }
+        if (appointmentSlotAvailabilityService.isSlotBlocked(appointment)) {
+            errors.add("Selected time slot is unavailable. Please choose another slot.");
+            return;
+        }
         if (appointmentSlotAvailabilityService.isSlotCapacityExceeded(appointment)) {
             errors.add("Selected time slot is full. Please choose another slot.");
         }

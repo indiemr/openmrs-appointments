@@ -5,9 +5,13 @@ import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Restrictions;
+import org.openmrs.Location;
+import org.openmrs.Provider;
 import org.openmrs.module.appointments.dao.AppointmentUnavailabilityDao;
+import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.model.AppointmentUnavailability;
 import org.openmrs.module.appointments.search.param.AppointmentUnavailabilitySearchParams;
+import org.openmrs.module.appointments.util.AppointmentUnavailabilityUtil;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.TypedQuery;
@@ -93,6 +97,50 @@ public class AppointmentUnavailabilityDaoImpl implements AppointmentUnavailabili
         }
 
         return query.getResultList();
+    }
+
+    @Override
+    public List<AppointmentUnavailability> findOverlappingForServiceOnDate(Location location,
+                                                                           AppointmentServiceDefinition service,
+                                                                           Provider provider,
+                                                                           Date dayStart,
+                                                                           Date dayEnd) {
+        if (location == null || dayStart == null || dayEnd == null) {
+            return new ArrayList<>();
+        }
+
+        CriteriaBuilder criteriaBuilder = sessionFactory.getCurrentSession().getCriteriaBuilder();
+        CriteriaQuery<AppointmentUnavailability> criteriaQuery = criteriaBuilder.createQuery(AppointmentUnavailability.class);
+        Root<AppointmentUnavailability> root = criteriaQuery.from(AppointmentUnavailability.class);
+
+        java.sql.Date sqlDayStart = AppointmentUnavailabilityUtil.toSqlDate(dayStart);
+        java.sql.Date sqlDayEnd = AppointmentUnavailabilityUtil.toSqlDate(dayEnd);
+
+        List<Predicate> predicates = new ArrayList<>();
+        predicates.add(criteriaBuilder.equal(root.get("voided"), false));
+        predicates.add(criteriaBuilder.equal(root.get("location").get("locationId"), location.getLocationId()));
+        predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("endDate"), sqlDayStart));
+        predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("startDate"), sqlDayEnd));
+
+        if (service != null) {
+            predicates.add(criteriaBuilder.or(
+                    criteriaBuilder.isNull(root.get("service")),
+                    criteriaBuilder.equal(root.get("service").get("appointmentServiceId"), service.getAppointmentServiceId())
+            ));
+        }
+
+        if (provider != null) {
+            predicates.add(criteriaBuilder.or(
+                    criteriaBuilder.isNull(root.get("provider")),
+                    criteriaBuilder.equal(root.get("provider").get("providerId"), provider.getProviderId())
+            ));
+        } else {
+            predicates.add(criteriaBuilder.isNull(root.get("provider")));
+        }
+
+        criteriaQuery.where(criteriaBuilder.and(predicates.toArray(new Predicate[0])));
+        criteriaQuery.orderBy(criteriaBuilder.asc(root.get("startDate")), criteriaBuilder.asc(root.get("startTime")));
+        return sessionFactory.getCurrentSession().createQuery(criteriaQuery).getResultList();
     }
 
     private void evictObjectFromSession(Session currentSession, AppointmentUnavailability appointmentUnavailability) {

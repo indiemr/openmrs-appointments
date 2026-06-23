@@ -7,6 +7,7 @@ public class AppointmentSlotAvailabilityResponse {
     private Integer capacity;
     private Integer booked;
     private Integer available;
+    private Boolean blocked;
 
     public String getStartDateTime() {
         return startDateTime;
@@ -46,5 +47,13 @@ public class AppointmentSlotAvailabilityResponse {
 
     public void setAvailable(Integer available) {
         this.available = available;
+    }
+
+    public Boolean getBlocked() {
+        return blocked;
+    }
+
+    public void setBlocked(Boolean blocked) {
+        this.blocked = blocked;
     }
 }
