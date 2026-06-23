@@ -11,6 +11,7 @@ import org.openmrs.module.appointments.model.AppointmentStatus;
 import org.openmrs.module.appointments.model.AppointmentUnavailability;
 import org.openmrs.module.appointments.model.ServiceWeeklyAvailability;
 import org.openmrs.module.appointments.service.AppointmentSlotAvailabilityService;
+import org.openmrs.module.appointments.util.AppointmentBookingRulesUtil;
 import org.openmrs.module.appointments.util.AppointmentServiceCapacityUtil;
 import org.openmrs.module.appointments.util.AppointmentUnavailabilityUtil;
 
@@ -47,6 +48,10 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
         }
         if (date == null) {
             throw new IllegalArgumentException("date is required");
+        }
+
+        if (!AppointmentBookingRulesUtil.isDateWithinBookingWindow(service, date)) {
+            return Collections.emptyList();
         }
 
         Provider provider = service.getProvider();

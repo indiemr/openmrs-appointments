@@ -151,12 +151,14 @@
                 <property name="appointmentValidators">
                     <list>
                         <bean class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentValidator"/>
+                        <ref bean="appointmentBookingWindowValidator"/>
                         <ref bean="appointmentSlotCapacityValidator"/>
                     </list>
                 </property>
                 <property name="editAppointmentValidators">
                     <list>
                         <ref bean="defaultEditAppointmentValidator"/>
+                        <ref bean="appointmentBookingWindowValidator"/>
                         <ref bean="appointmentSlotCapacityValidator"/>
                     </list>
                 </property>
@@ -208,12 +210,14 @@
                 <property name="appointmentValidators">
                     <list>
                         <bean class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentValidator"/>
+                        <ref bean="appointmentBookingWindowValidator"/>
                         <ref bean="appointmentSlotCapacityValidator"/>
                     </list>
                 </property>
                 <property name="editAppointmentValidators">
                     <list>
                         <ref bean="defaultEditAppointmentValidator"/>
+                        <ref bean="appointmentBookingWindowValidator"/>
                         <ref bean="appointmentSlotCapacityValidator"/>
                     </list>
                 </property>
@@ -406,6 +410,8 @@
     <bean id="appointmentSlotCapacityValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentSlotCapacityValidator">
         <property name="appointmentSlotAvailabilityService" ref="appointmentSlotAvailabilityService"/>
     </bean>
+
+    <bean id="appointmentBookingWindowValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentBookingWindowValidator"/>
 
     <bean parent="serviceContext">
         <property name="moduleService">

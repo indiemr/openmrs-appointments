@@ -34,6 +34,7 @@ public class AppointmentServiceDefinition extends BaseOpenmrsData implements Ser
     private Set<ServiceWeeklyAvailability> weeklyAvailability;
     private Set<AppointmentServiceType> serviceTypes;
     private Set<AppointmentServiceAttribute> attributes;
+    private Integer bookAheadDays;
 
     public Location getLocation() {
         return location;
@@ -113,6 +114,13 @@ public class AppointmentServiceDefinition extends BaseOpenmrsData implements Ser
 
     public void setAppointmentServiceId(Integer appointmentServiceId) {
         this.appointmentServiceId = appointmentServiceId;
+    }
+
+    public Integer getBookAheadDays() {
+        return bookAheadDays;
+    }
+    public void setBookAheadDays(Integer bookAheadDays) {
+        this.bookAheadDays = bookAheadDays;
     }
 
     @Override

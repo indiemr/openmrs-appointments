@@ -14,6 +14,7 @@ import org.openmrs.module.appointments.model.AppointmentServiceAttributeType;
 import org.openmrs.module.appointments.service.AppointmentServiceAttributeTypeService;
 import org.openmrs.module.appointments.service.AppointmentServiceDefinitionService;
 import org.openmrs.module.appointments.service.SpecialityService;
+import org.openmrs.module.appointments.util.AppointmentBookingRulesUtil;
 import org.openmrs.module.appointments.web.contract.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -103,6 +104,8 @@ public class AppointmentServiceMapper {
         }
 
         validateAttributeCardinality(appointmentServiceDefinition);
+        AppointmentBookingRulesUtil.validateBookAheadDays(appointmentServiceDescription.getBookAheadDays());
+        appointmentServiceDefinition.setBookAheadDays(appointmentServiceDescription.getBookAheadDays());
 
         return appointmentServiceDefinition;
     }
@@ -267,6 +270,7 @@ public class AppointmentServiceMapper {
         asResponse.setMaxAppointmentsLimit(as.getMaxAppointmentsLimit());
         asResponse.setColor(as.getColor());
         asResponse.setMaxAppointmentsPerSlot(as.getMaxAppointmentsPerSlot());
+        asResponse.setBookAheadDays(as.getBookAheadDays());
 
         AppointmentStatus initialAppointmentStatus = as.getInitialAppointmentStatus();
         if (null != initialAppointmentStatus){

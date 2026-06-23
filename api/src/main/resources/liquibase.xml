@@ -1049,4 +1049,18 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="add_book_ahead_days_to_appointment_service" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_service" columnName="book_ahead_days" />
+            </not>
+        </preConditions>
+        <comment>Max days into the future patients can book appointments</comment>
+        <addColumn tableName="appointment_service">
+            <column name="book_ahead_days" type="int">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

@@ -25,6 +25,14 @@ public class AppointmentServiceDescription {
     private Set<AppointmentServiceTypeDescription> serviceTypes;
     private Set<AppointmentServiceAttributeDescription> attributes;
     private Integer maxAppointmentsPerSlot;
+    private Integer bookAheadDays;
+
+    public Integer getBookAheadDays() {
+        return bookAheadDays;
+    }
+    public void setBookAheadDays(Integer bookAheadDays) {
+        this.bookAheadDays = bookAheadDays;
+    }
 
     public Integer getMaxAppointmentsPerSlot() {
         return maxAppointmentsPerSlot;

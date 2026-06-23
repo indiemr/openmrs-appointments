@@ -50,5 +50,6 @@
             <key column="appointment_service_id"/>
             <one-to-many class="org.openmrs.module.appointments.model.AppointmentServiceAttribute"/>
         </set>
+        <property name="bookAheadDays" type="java.lang.Integer" column="book_ahead_days" />
     </class>
 </hibernate-mapping>
