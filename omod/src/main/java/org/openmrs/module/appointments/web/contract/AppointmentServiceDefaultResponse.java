@@ -22,6 +22,7 @@ public class AppointmentServiceDefaultResponse {
 	private Integer maxAppointmentsPerSlot;
 	private Integer bookAheadDays;
 	private Integer leadTimeMinutes;
+	private Boolean allowPatientBooking;
 
 	public Integer getBookAheadDays() {
 		return bookAheadDays;
@@ -167,4 +168,12 @@ public class AppointmentServiceDefaultResponse {
 	public void setAttributes(List<AppointmentServiceAttributeResponse> attributes) {
 		this.attributes = attributes;
 	}
+
+	public Boolean getAllowPatientBooking() {
+        return allowPatientBooking;
+    }
+    
+    public void setAllowPatientBooking(Boolean allowPatientBooking) {
+        this.allowPatientBooking = allowPatientBooking;
+    }
 }

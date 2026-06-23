@@ -52,5 +52,6 @@
         </set>
         <property name="bookAheadDays" type="java.lang.Integer" column="book_ahead_days" />
         <property name="leadTimeMinutes" type="java.lang.Integer" column="lead_time_minutes" />
+        <property name="allowPatientBooking" type="java.lang.Boolean" column="allow_patient_booking" not-null="true" />
     </class>
 </hibernate-mapping>

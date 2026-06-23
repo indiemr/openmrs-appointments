@@ -57,7 +57,15 @@ public class AppointmentServiceMapper {
         appointmentServiceDefinition.setMaxAppointmentsLimit(appointmentServiceDescription.getMaxAppointmentsLimit());
         appointmentServiceDefinition.setMaxAppointmentsPerSlot(appointmentServiceDescription.getMaxAppointmentsPerSlot());
         appointmentServiceDefinition.setColor(appointmentServiceDescription.getColor());
+        Boolean allowPatientBooking = appointmentServiceDescription.getAllowPatientBooking();
+        if (allowPatientBooking != null) {
+            appointmentServiceDefinition.setAllowPatientBooking(allowPatientBooking);
+        } else if (appointmentServiceDefinition.getAllowPatientBooking() == null) {
+            // new service, or existing row never had value loaded
+            appointmentServiceDefinition.setAllowPatientBooking(Boolean.TRUE);
+        }
 
+        // on edit: if omitted, keep existing DB value
         String initialAppointmentStatus = appointmentServiceDescription.getInitialAppointmentStatus();
         if (StringUtils.isNotBlank(initialAppointmentStatus)) {
             appointmentServiceDefinition.setInitialAppointmentStatus(AppointmentStatus.valueOf(initialAppointmentStatus));
@@ -275,6 +283,7 @@ public class AppointmentServiceMapper {
         asResponse.setMaxAppointmentsPerSlot(as.getMaxAppointmentsPerSlot());
         asResponse.setBookAheadDays(as.getBookAheadDays());
         asResponse.setLeadTimeMinutes(as.getLeadTimeMinutes());
+        asResponse.setAllowPatientBooking(as.getAllowPatientBooking());
 
         AppointmentStatus initialAppointmentStatus = as.getInitialAppointmentStatus();
         if (null != initialAppointmentStatus){

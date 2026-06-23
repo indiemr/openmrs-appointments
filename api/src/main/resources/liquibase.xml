@@ -1077,4 +1077,18 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="add_allow_patient_booking_to_appointment_service" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_service" columnName="allow_patient_booking" />
+            </not>
+        </preConditions>
+        <comment>Allow patients can book appointment under these appointment service</comment>
+        <addColumn tableName="appointment_service">
+            <column name="allow_patient_booking" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

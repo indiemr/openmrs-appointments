@@ -27,6 +27,7 @@ public class AppointmentServiceDescription {
     private Integer maxAppointmentsPerSlot;
     private Integer bookAheadDays;
     private Integer leadTimeMinutes;
+    private Boolean allowPatientBooking;
 
     public Integer getBookAheadDays() {
         return bookAheadDays;
@@ -171,5 +172,13 @@ public class AppointmentServiceDescription {
 
     public void setInitialAppointmentStatus(String initialAppointmentStatus) {
         this.initialAppointmentStatus = initialAppointmentStatus;
+    }
+
+    public Boolean getAllowPatientBooking() {
+        return allowPatientBooking;
+    }
+    
+    public void setAllowPatientBooking(Boolean allowPatientBooking) {
+        this.allowPatientBooking = allowPatientBooking;
     }
 }
