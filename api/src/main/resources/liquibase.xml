@@ -1091,4 +1091,18 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="add_service_mode_to_appointment_service" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_service" columnName="service_mode" />
+            </not>
+        </preConditions>
+        <comment>Consultation mode for appointment service: Inclinic or Tele consultation</comment>
+        <addColumn tableName="appointment_service">
+            <column name="service_mode" type="varchar(45)" defaultValue="InClinic">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

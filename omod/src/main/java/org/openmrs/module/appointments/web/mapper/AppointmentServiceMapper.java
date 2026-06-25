@@ -6,6 +6,7 @@ import org.openmrs.api.LocationService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.appointments.model.AppointmentServiceAttribute;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
+import org.openmrs.module.appointments.model.AppointmentServiceMode;
 import org.openmrs.module.appointments.model.AppointmentServiceType;
 import org.openmrs.module.appointments.model.AppointmentStatus;
 import org.openmrs.module.appointments.model.ServiceWeeklyAvailability;
@@ -63,6 +64,17 @@ public class AppointmentServiceMapper {
         } else if (appointmentServiceDefinition.getAllowPatientBooking() == null) {
             // new service, or existing row never had value loaded
             appointmentServiceDefinition.setAllowPatientBooking(Boolean.TRUE);
+        }
+
+        String serviceMode = appointmentServiceDescription.getServiceMode();
+        if(StringUtils.isNotBlank(serviceMode)) {
+            try {
+                appointmentServiceDefinition.setServiceMode(AppointmentServiceMode.valueOf(serviceMode));
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("serviceMode must be InClinic or TeleConsultation");
+            }
+        } else if (appointmentServiceDefinition.getServiceMode() == null) {
+            appointmentServiceDefinition.setServiceMode(AppointmentServiceMode.InClinic);
         }
 
         // on edit: if omitted, keep existing DB value
@@ -288,6 +300,13 @@ public class AppointmentServiceMapper {
         AppointmentStatus initialAppointmentStatus = as.getInitialAppointmentStatus();
         if (null != initialAppointmentStatus){
             asResponse.setInitialAppointmentStatus(initialAppointmentStatus.name());
+        }
+
+        AppointmentServiceMode serviceMode = as.getServiceMode();
+        if (serviceMode != null) {
+            asResponse.setServiceMode(serviceMode.name());
+        } else {
+            asResponse.setServiceMode(AppointmentServiceMode.InClinic.name());
         }
 
         Map specialityMap = new HashMap();

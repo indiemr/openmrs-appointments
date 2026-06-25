@@ -28,6 +28,15 @@ public class AppointmentServiceDescription {
     private Integer bookAheadDays;
     private Integer leadTimeMinutes;
     private Boolean allowPatientBooking;
+    private String serviceMode;
+
+    public String getServiceMode() { 
+        return serviceMode; 
+    }
+
+    public void setServiceMode(String serviceMode) { 
+        this.serviceMode = serviceMode; 
+    }
 
     public Integer getBookAheadDays() {
         return bookAheadDays;

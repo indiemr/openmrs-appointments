@@ -37,6 +37,7 @@ public class AppointmentServiceDefinition extends BaseOpenmrsData implements Ser
     private Integer bookAheadDays;
     private Integer leadTimeMinutes;
     private Boolean allowPatientBooking;
+    private AppointmentServiceMode serviceMode;
 
     public Location getLocation() {
         return location;
@@ -140,6 +141,14 @@ public class AppointmentServiceDefinition extends BaseOpenmrsData implements Ser
     
     public void setAllowPatientBooking(Boolean allowPatientBooking) {
         this.allowPatientBooking = allowPatientBooking;
+    }
+
+    public AppointmentServiceMode getServiceMode() {
+        return serviceMode;
+    }
+    
+    public void setServiceMode(AppointmentServiceMode serviceMode) {
+        this.serviceMode = serviceMode;
     }
 
     @Override
