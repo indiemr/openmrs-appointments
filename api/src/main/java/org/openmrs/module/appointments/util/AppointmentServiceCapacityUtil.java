@@ -16,8 +16,15 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.openmrs.api.context.Context;
 
 public final class AppointmentServiceCapacityUtil {
+    public static final String GP_DEFAULT_MINUTES_PER_APPOINTMENT = "appointments.defaultMinutesPerAppointment";
+    public static final String GP_DEFAULT_DURATION_MINUTES = "appointments.defaultSlotDurationMinutes";
+
+    // fallback if GP missing/invalid
+    public static final int DEFAULT_MINUTES_PER_APPOINTMENT = 5;
+    public static final int DEFAULT_DURATION_MINUTES = 15;
     public static final List<AppointmentStatus> OCCUPYING_STATUSES = Collections.unmodifiableList(Arrays.asList(
         AppointmentStatus.Scheduled,
         AppointmentStatus.CheckedIn,
@@ -26,6 +33,37 @@ public final class AppointmentServiceCapacityUtil {
     ));
 
     private AppointmentServiceCapacityUtil() {}
+
+    public static int resolveSlotCapacity(
+            AppointmentServiceDefinition service,
+            ServiceWeeklyAvailability weeklyAvailability,
+            int durationMins) {
+
+        Integer configured = resolveMaxAppointmentsPerSlot(service, weeklyAvailability);
+        if (configured != null) {
+            return configured;
+        }
+        return Math.max(1, durationMins / getDefaultMinutesPerAppointment());
+    }
+
+    private static int getGlobalPropertyInt(String propertyName, int defaultValue) {
+        try {
+            String value = Context.getAdministrationService()
+                    .getGlobalProperty(propertyName, String.valueOf(defaultValue));
+            int parsed = Integer.parseInt(value.trim());
+            return parsed > 0 ? parsed : defaultValue;
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
+    public static int getDefaultMinutesPerAppointment() {
+        return getGlobalPropertyInt(GP_DEFAULT_MINUTES_PER_APPOINTMENT, DEFAULT_MINUTES_PER_APPOINTMENT);
+    }
+
+    public static int getDefaultDurationMinutes() {
+        return getGlobalPropertyInt(GP_DEFAULT_DURATION_MINUTES, DEFAULT_DURATION_MINUTES);
+    }
 
     public static Integer resolveMaxAppointmentsPerSlot(AppointmentServiceDefinition service, ServiceWeeklyAvailability weeklyAvailability) {
         if (weeklyAvailability != null && weeklyAvailability.getMaxAppointmentsPerSlot() != null) {
@@ -56,7 +94,7 @@ public final class AppointmentServiceCapacityUtil {
         if (serviceType != null && serviceType.getDuration() != null) {
             return serviceType.getDuration();
         }
-        return 30;
+        return getDefaultDurationMinutes();
     }
 
     public static int resolveDurationMins(Appointment appointment) {

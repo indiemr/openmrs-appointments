@@ -87,10 +87,9 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
         DayOfWeek dayOfWeek = AppointmentServiceCapacityUtil.toDayOfWeek(appointment.getStartDateTime());
         ServiceWeeklyAvailability weeklyAvailability = resolveWeeklyAvailabilityForAppointment(service, dayOfWeek,
                 appointment.getStartDateTime());
-        Integer capacity = AppointmentServiceCapacityUtil.resolveMaxAppointmentsPerSlot(service, weeklyAvailability);
-        if (capacity == null) {
-            return false;
-        }
+
+        int durationMins = AppointmentServiceCapacityUtil.resolveDurationMins(appointment);
+        int capacity = AppointmentServiceCapacityUtil.resolveSlotCapacity(service, weeklyAvailability, durationMins);
         Date slotStart = appointment.getStartDateTime();
         Date slotEnd = AppointmentServiceCapacityUtil.resolveAppointmentEndDateTime(appointment);
         Provider provider = service.getProvider();
@@ -136,7 +135,8 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
             String excludeAppointmentUuid,
             List<AppointmentUnavailability> unavailabilities) {
         List<AppointmentSlotAvailability> slots = new ArrayList<>();
-        Integer capacity = AppointmentServiceCapacityUtil.resolveMaxAppointmentsPerSlot(service, weeklyAvailability);
+        
+        int capacity = AppointmentServiceCapacityUtil.resolveSlotCapacity(service, weeklyAvailability, durationMins);
         List<Date[]> timeSlots = AppointmentServiceCapacityUtil.generateSlots(date, startTime, endTime, durationMins);
 
         for (Date[] window : timeSlots) {
@@ -153,11 +153,8 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
             slot.setBlocked(blocked);
 
             if (blocked) {
-                slot.setBooked(capacity == null ? null : 0);
+                slot.setBooked(0);
                 slot.setAvailable(0);
-            } else if (capacity == null) {
-                slot.setBooked(null);
-                slot.setAvailable(null);
             } else {
                 int booked = countBookedAppointments(service, provider, s, e, excludeAppointmentUuid);
                 slot.setBooked(booked);

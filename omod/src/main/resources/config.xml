@@ -173,6 +173,17 @@
 		<defaultValue>false</defaultValue>
 	</globalProperty>
 
+	<globalProperty>
+		<property>appointments.defaultMinutesPerAppointment</property>
+		<defaultValue>5</defaultValue>
+		<description>Default minutes allocated per appointment when maxAppointmentsPerSlot is not set (used to derive slot capacity)</description>
+	</globalProperty>
+	<globalProperty>
+		<property>appointments.defaultSlotDurationMinutes</property>
+		<defaultValue>15</defaultValue>
+		<description>Default appointment slot duration in minutes when service/service type duration is not configured</description>
+	</globalProperty>
+
 
 	<privilege>
 		<name>app:appointments:manageServiceAvailability</name>
