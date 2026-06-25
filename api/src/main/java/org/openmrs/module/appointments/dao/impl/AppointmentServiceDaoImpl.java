@@ -19,6 +19,7 @@ import javax.persistence.criteria.JoinType;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class AppointmentServiceDaoImpl implements AppointmentServiceDao{
@@ -30,11 +31,20 @@ public class AppointmentServiceDaoImpl implements AppointmentServiceDao{
     }
 
     @Override
-    public List<AppointmentServiceDefinition> getAllAppointmentServices(boolean includeVoided) {
+    public List<AppointmentServiceDefinition> getAllAppointmentServices(boolean includeVoided, List<String> locationUuids) {
         Criteria criteria = sessionFactory.getCurrentSession().createCriteria(AppointmentServiceDefinition.class, "appointmentService");
         if(!includeVoided) {
             criteria.add(Restrictions.eq("voided", includeVoided));
         }
+
+        if (locationUuids != null) {
+            if (locationUuids.isEmpty()) {
+                return Collections.emptyList();
+            }
+            criteria.createAlias("location", "loc");
+            criteria.add(Restrictions.in("loc.uuid", locationUuids));
+        }
+        
         return criteria.list();
     }
 

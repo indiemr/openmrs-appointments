@@ -1,5 +1,7 @@
 package org.openmrs.module.appointments.service.impl;
 
+import org.openmrs.Location;
+import org.openmrs.api.LocationService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.appointments.dao.AppointmentServiceDao;
 import org.openmrs.module.appointments.model.Appointment;
@@ -11,6 +13,7 @@ import org.openmrs.module.appointments.model.ServiceWeeklyAvailability;
 import org.openmrs.module.appointments.model.AppointmentServiceAttribute;
 import org.openmrs.module.appointments.service.AppointmentServiceDefinitionService;
 import org.openmrs.module.appointments.service.AppointmentsService;
+import org.openmrs.module.appointments.util.AppointmentServiceLocationUtil;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
@@ -28,6 +31,9 @@ public class AppointmentServiceDefinitionServiceImpl implements AppointmentServi
     public void setAppointmentsService(AppointmentsService appointmentsService) {
         this.appointmentsService = appointmentsService;
     }
+    private LocationService getLocationService() {
+        return Context.getLocationService();
+    }
 
     @Override
     public AppointmentServiceDefinition save(AppointmentServiceDefinition appointmentServiceDefinition) {
@@ -40,8 +46,15 @@ public class AppointmentServiceDefinitionServiceImpl implements AppointmentServi
 
     @Override
     public List<AppointmentServiceDefinition> getAllAppointmentServices(boolean includeVoided) {
-        return appointmentServiceDao.getAllAppointmentServices(includeVoided);
-    }
+        Location sessionLocation = Context.getUserContext().getLocation();
+        if (sessionLocation == null) {
+            return appointmentServiceDao.getAllAppointmentServices(includeVoided, null);
+        }
+
+        List<String> allowedLocationIds = AppointmentServiceLocationUtil
+            .getSelfAndDescendantLocationUuids(sessionLocation, getLocationService());
+    return appointmentServiceDao.getAllAppointmentServices(includeVoided, allowedLocationIds);
+}
 
     @Override
     public AppointmentServiceDefinition getAppointmentServiceByUuid(String uuid) {
