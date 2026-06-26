@@ -86,6 +86,44 @@ public final class AppointmentBookingRulesUtil {
     }
 
     // ---------------------------- COMMON UTILS ------------------------------------------
+    public static boolean isCancellationAllowed(Appointment appointment) {
+        if (appointment == null || appointment.getStartDateTime() == null) {
+            return true;
+        }
+
+        AppointmentServiceDefinition service = appointment.getService();
+        if (service == null) {
+            return true;
+        }
+
+        Integer cancellationCutoffMinutes = service.getCancellationCutoffMinutes();
+
+        if (cancellationCutoffMinutes == null) {
+            return true;
+        }
+
+        ZoneId zoneId = resolveZoneId(service.getLocation());
+
+        LocalDateTime now = LocalDateTime.now(zoneId);
+
+        LocalDateTime appointmentTime = appointment.getStartDateTime()
+                .toInstant()
+                .atZone(zoneId)
+                .toLocalDateTime();
+
+        LocalDateTime cancellationDeadline =
+                appointmentTime.minusMinutes(cancellationCutoffMinutes);
+
+        return !now.isAfter(cancellationDeadline);
+    }
+
+    public static void validateCancellationCutoffMinutes(Integer cancellationCutoffMinutes) {
+        if (cancellationCutoffMinutes != null && cancellationCutoffMinutes < 0) {
+            throw new IllegalArgumentException("cancellationCutoffMinutes must be zero or positive");
+        }
+    }
+
+    // ---------------------------- COMMON UTILS ------------------------------------------
     public static ZoneId resolveZoneId(Location location) {
         if (location != null && location.getActiveAttributes() != null) {
             for (LocationAttribute attribute : location.getActiveAttributes()) {

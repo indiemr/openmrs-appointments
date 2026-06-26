@@ -1105,4 +1105,17 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="add_cancellation_cutoff_minutes_to_appointment_service" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_service" columnName="cancellation_cutoff_minutes" />
+            </not>
+        </preConditions>
+        <addColumn tableName="appointment_service">
+            <column name="cancellation_cutoff_minutes" type="int">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

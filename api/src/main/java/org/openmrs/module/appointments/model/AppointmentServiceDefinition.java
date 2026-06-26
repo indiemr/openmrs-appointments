@@ -11,7 +11,6 @@ import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -36,6 +35,7 @@ public class AppointmentServiceDefinition extends BaseOpenmrsData implements Ser
     private Set<AppointmentServiceAttribute> attributes;
     private Integer bookAheadDays;
     private Integer leadTimeMinutes;
+    private Integer cancellationCutoffMinutes;
     private Boolean allowPatientBooking;
     private AppointmentServiceMode serviceMode;
 
@@ -133,6 +133,14 @@ public class AppointmentServiceDefinition extends BaseOpenmrsData implements Ser
     
     public void setLeadTimeMinutes(Integer leadTimeMinutes) {
         this.leadTimeMinutes = leadTimeMinutes;
+    }
+
+    public Integer getCancellationCutoffMinutes() {
+        return cancellationCutoffMinutes;
+    }
+    
+    public void setCancellationCutoffMinutes(Integer cancellationCutoffMinutes) {
+        this.cancellationCutoffMinutes = cancellationCutoffMinutes;
     }
 
     public Boolean getAllowPatientBooking() {

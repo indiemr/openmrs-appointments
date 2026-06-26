@@ -130,6 +130,9 @@ public class AppointmentServiceMapper {
         AppointmentBookingRulesUtil.validateLeadTimeMinutes(appointmentServiceDescription.getLeadTimeMinutes());
         appointmentServiceDefinition.setLeadTimeMinutes(appointmentServiceDescription.getLeadTimeMinutes());
 
+        AppointmentBookingRulesUtil.validateCancellationCutoffMinutes(appointmentServiceDescription.getCancellationCutoffMinutes());
+    appointmentServiceDefinition.setCancellationCutoffMinutes(appointmentServiceDescription.getCancellationCutoffMinutes());
+
         return appointmentServiceDefinition;
     }
 
@@ -296,6 +299,7 @@ public class AppointmentServiceMapper {
         asResponse.setBookAheadDays(as.getBookAheadDays());
         asResponse.setLeadTimeMinutes(as.getLeadTimeMinutes());
         asResponse.setAllowPatientBooking(as.getAllowPatientBooking());
+        asResponse.setCancellationCutoffMinutes(as.getCancellationCutoffMinutes());
 
         AppointmentStatus initialAppointmentStatus = as.getInitialAppointmentStatus();
         if (null != initialAppointmentStatus){

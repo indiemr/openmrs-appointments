@@ -22,6 +22,7 @@ public class AppointmentServiceDefaultResponse {
 	private Integer maxAppointmentsPerSlot;
 	private Integer bookAheadDays;
 	private Integer leadTimeMinutes;
+	private Integer cancellationCutoffMinutes;
 	private Boolean allowPatientBooking;
 	private String serviceMode;
 
@@ -108,6 +109,14 @@ public class AppointmentServiceDefaultResponse {
 	public Integer getDurationMins() {
 		return durationMins;
 	}
+
+	public Integer getCancellationCutoffMinutes() {
+        return cancellationCutoffMinutes;
+    }
+    
+    public void setCancellationCutoffMinutes(Integer cancellationCutoffMinutes) {
+        this.cancellationCutoffMinutes = cancellationCutoffMinutes;
+    }
 
 	public void setDurationMins(Integer durationMins) {
 		this.durationMins = durationMins;

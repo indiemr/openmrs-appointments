@@ -27,6 +27,7 @@ public class AppointmentServiceDescription {
     private Integer maxAppointmentsPerSlot;
     private Integer bookAheadDays;
     private Integer leadTimeMinutes;
+    private Integer cancellationCutoffMinutes;
     private Boolean allowPatientBooking;
     private String serviceMode;
 
@@ -52,6 +53,14 @@ public class AppointmentServiceDescription {
 
     public void setLeadTimeMinutes(Integer leadTimeMinutes) {
         this.leadTimeMinutes = leadTimeMinutes;
+    }
+
+    public Integer getCancellationCutoffMinutes() {
+        return cancellationCutoffMinutes;
+    }
+    
+    public void setCancellationCutoffMinutes(Integer cancellationCutoffMinutes) {
+        this.cancellationCutoffMinutes = cancellationCutoffMinutes;
     }
 
     public Integer getMaxAppointmentsPerSlot() {

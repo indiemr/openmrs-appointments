@@ -107,6 +107,7 @@
 				<property name="statusChangeValidators">
 					<list>
 						<bean class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentStatusChangeValidator"/>
+						<ref bean="appointmentCancellationStatusChangeValidator"/>
 					</list>
 				</property>
 				<property name="appointmentValidators">
@@ -114,6 +115,7 @@
 						<bean class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentValidator"/>
 						<ref bean="appointmentBookingWindowValidator"/>
 						<ref bean="appointmentLeadTimeValidator"/>
+						<ref bean="appointmentCancellationValidator"/>
 						<ref bean="appointmentSlotCapacityValidator"/>
 					</list>
 				</property>
@@ -122,6 +124,7 @@
 						<ref bean="defaultEditAppointmentValidator"/>
 						<ref bean="appointmentBookingWindowValidator"/>
 						<ref bean="appointmentLeadTimeValidator"/>
+						<ref bean="appointmentCancellationValidator"/>
 						<ref bean="appointmentSlotCapacityValidator"/>
 					</list>
 				</property>
@@ -282,4 +285,6 @@
 
 	<bean id="appointmentBookingWindowValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentBookingWindowValidator"/>
 	<bean id="appointmentLeadTimeValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentLeadTimeValidator"/>
+	<bean id="appointmentCancellationValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentCancellationValidator"/>
+    <bean id="appointmentCancellationStatusChangeValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentCancellationStatusChangeValidator"/>
 </beans>
