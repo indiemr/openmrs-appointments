@@ -13,11 +13,58 @@ public class AppointmentServiceDefaultResponse {
 	private Integer maxAppointmentsLimit;
 	private Integer durationMins;
 	private Map location;
+	private Map provider;
 	private String uuid;
 	private String color;
 	private String initialAppointmentStatus;
 	private String creatorName;
 	private List<AppointmentServiceAttributeResponse> attributes;
+	private Integer maxAppointmentsPerSlot;
+	private Integer bookAheadDays;
+	private Integer leadTimeMinutes;
+	private Integer cancellationCutoffMinutes;
+	private Boolean allowPatientBooking;
+	private String serviceMode;
+
+	public String getServiceMode() {
+		return serviceMode; 
+	}
+
+	public void setServiceMode(String serviceMode) { 
+		this.serviceMode = serviceMode; 
+	}
+
+	public Integer getBookAheadDays() {
+		return bookAheadDays;
+	}
+
+	public void setBookAheadDays(Integer bookAheadDays) {
+		this.bookAheadDays = bookAheadDays;
+	}
+
+	public Integer getLeadTimeMinutes() {
+		return leadTimeMinutes;
+	}
+
+	public void setLeadTimeMinutes(Integer leadTimeMinutes) {
+		this.leadTimeMinutes = leadTimeMinutes;
+	}
+
+	public Integer getMaxAppointmentsPerSlot() {
+        return maxAppointmentsPerSlot;
+    }
+
+    public void setMaxAppointmentsPerSlot(Integer maxAppointmentsPerSlot) {
+        this.maxAppointmentsPerSlot = maxAppointmentsPerSlot;
+    }
+
+	public Map getProvider() {
+        return provider;
+    }
+
+    public void setProvider(Map provider) {
+        this.provider = provider;
+    }
 
 	public Integer getAppointmentServiceId() {
 		return appointmentServiceId;
@@ -62,6 +109,14 @@ public class AppointmentServiceDefaultResponse {
 	public Integer getDurationMins() {
 		return durationMins;
 	}
+
+	public Integer getCancellationCutoffMinutes() {
+        return cancellationCutoffMinutes;
+    }
+    
+    public void setCancellationCutoffMinutes(Integer cancellationCutoffMinutes) {
+        this.cancellationCutoffMinutes = cancellationCutoffMinutes;
+    }
 
 	public void setDurationMins(Integer durationMins) {
 		this.durationMins = durationMins;
@@ -131,4 +186,12 @@ public class AppointmentServiceDefaultResponse {
 	public void setAttributes(List<AppointmentServiceAttributeResponse> attributes) {
 		this.attributes = attributes;
 	}
+
+	public Boolean getAllowPatientBooking() {
+        return allowPatientBooking;
+    }
+    
+    public void setAllowPatientBooking(Boolean allowPatientBooking) {
+        this.allowPatientBooking = allowPatientBooking;
+    }
 }

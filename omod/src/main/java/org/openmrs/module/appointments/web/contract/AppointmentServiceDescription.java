@@ -17,12 +17,67 @@ public class AppointmentServiceDescription {
     private Integer maxAppointmentsLimit;
     private Integer durationMins;
     private String locationUuid;
+    private String providerUuid;
     private String uuid;
     private String color;
     private String initialAppointmentStatus;
     private List<ServiceWeeklyAvailabilityDescription> weeklyAvailability;
     private Set<AppointmentServiceTypeDescription> serviceTypes;
     private Set<AppointmentServiceAttributeDescription> attributes;
+    private Integer maxAppointmentsPerSlot;
+    private Integer bookAheadDays;
+    private Integer leadTimeMinutes;
+    private Integer cancellationCutoffMinutes;
+    private Boolean allowPatientBooking;
+    private String serviceMode;
+
+    public String getServiceMode() { 
+        return serviceMode; 
+    }
+
+    public void setServiceMode(String serviceMode) { 
+        this.serviceMode = serviceMode; 
+    }
+
+    public Integer getBookAheadDays() {
+        return bookAheadDays;
+    }
+
+    public void setBookAheadDays(Integer bookAheadDays) {
+        this.bookAheadDays = bookAheadDays;
+    }
+
+    public Integer getLeadTimeMinutes() {
+        return leadTimeMinutes;
+    }
+
+    public void setLeadTimeMinutes(Integer leadTimeMinutes) {
+        this.leadTimeMinutes = leadTimeMinutes;
+    }
+
+    public Integer getCancellationCutoffMinutes() {
+        return cancellationCutoffMinutes;
+    }
+    
+    public void setCancellationCutoffMinutes(Integer cancellationCutoffMinutes) {
+        this.cancellationCutoffMinutes = cancellationCutoffMinutes;
+    }
+
+    public Integer getMaxAppointmentsPerSlot() {
+        return maxAppointmentsPerSlot;
+    }
+
+    public void setMaxAppointmentsPerSlot(Integer maxAppointmentsPerSlot) {
+        this.maxAppointmentsPerSlot = maxAppointmentsPerSlot;
+    }
+
+    public String getProviderUuid() {
+        return providerUuid;
+    }
+
+    public void setProviderUuid(String providerUuid) {
+        this.providerUuid = providerUuid;
+    }
 
     public Set<AppointmentServiceTypeDescription> getServiceTypes() {
         return serviceTypes;
@@ -135,5 +190,13 @@ public class AppointmentServiceDescription {
 
     public void setInitialAppointmentStatus(String initialAppointmentStatus) {
         this.initialAppointmentStatus = initialAppointmentStatus;
+    }
+
+    public Boolean getAllowPatientBooking() {
+        return allowPatientBooking;
+    }
+    
+    public void setAllowPatientBooking(Boolean allowPatientBooking) {
+        this.allowPatientBooking = allowPatientBooking;
     }
 }

@@ -93,16 +93,25 @@
                 <property name="statusChangeValidators">
                     <list>
                         <bean class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentStatusChangeValidator"/>
+                        <ref bean="appointmentCancellationStatusChangeValidator"/>
                     </list>
                 </property>
                 <property name="appointmentValidators">
                     <list>
                         <bean class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentValidator"/>
+                        <ref bean="appointmentBookingWindowValidator"/>
+                        <ref bean="appointmentLeadTimeValidator"/>
+                        <ref bean="appointmentCancellationValidator"/>
+                        <ref bean="appointmentSlotCapacityValidator"/>
                     </list>
                 </property>
                 <property name="editAppointmentValidators">
                     <list>
                         <ref bean="defaultEditAppointmentValidator"/>
+                        <ref bean="appointmentBookingWindowValidator"/>
+                        <ref bean="appointmentLeadTimeValidator"/>
+                        <ref bean="appointmentCancellationValidator"/>
+                        <ref bean="appointmentSlotCapacityValidator"/>
                     </list>
                 </property>
                 <property name="appointmentServiceHelper">
@@ -138,6 +147,12 @@
         <property name="appointmentDao" ref="appointmentDao"/>
     </bean>
 
+    <bean id="appointmentUnavailabilityDao" class="org.openmrs.module.appointments.dao.impl.AppointmentUnavailabilityDaoImpl">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+
     <bean id="appointmentsService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
         <property name="transactionManager">
             <ref bean="transactionManager"/>
@@ -157,16 +172,25 @@
                 <property name="statusChangeValidators">
                     <list>
                         <bean class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentStatusChangeValidator"/>
+                        <ref bean="appointmentCancellationStatusChangeValidator"/>
                     </list>
                 </property>
                 <property name="appointmentValidators">
                     <list>
                         <bean class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentValidator"/>
+                        <ref bean="appointmentBookingWindowValidator"/>
+                        <ref bean="appointmentLeadTimeValidator"/>
+                        <ref bean="appointmentCancellationValidator"/>
+                        <ref bean="appointmentSlotCapacityValidator"/>
                     </list>
                 </property>
                 <property name="editAppointmentValidators">
                     <list>
                         <ref bean="defaultEditAppointmentValidator"/>
+                        <ref bean="appointmentBookingWindowValidator"/>
+                        <ref bean="appointmentLeadTimeValidator"/>
+                        <ref bean="appointmentCancellationValidator"/>
+                        <ref bean="appointmentSlotCapacityValidator"/>
                     </list>
                 </property>
                 <property name="appointmentServiceHelper">
@@ -176,6 +200,7 @@
                     <list>
                         <bean class="org.openmrs.module.appointments.conflicts.impl.AppointmentServiceUnavailabilityConflict"/>
                         <ref bean="patientDoubleBookingConflict"/>
+                        <ref bean="appointmentUnavailabilityConflict"/>
                     </list>
                 </property>
                 <property name="appointmentNotifierService">
@@ -221,19 +246,19 @@
         </property>
     </bean>
 
+    <bean id="appointmentServiceDao" class="org.openmrs.module.appointments.dao.impl.AppointmentServiceDaoImpl">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+
     <bean id="appointmentServiceService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
         <property name="transactionManager">
             <ref bean="transactionManager"/>
         </property>
         <property name="target">
             <bean class="org.openmrs.module.appointments.service.impl.AppointmentServiceDefinitionServiceImpl">
-                <property name="appointmentServiceDao">
-                    <bean class="org.openmrs.module.appointments.dao.impl.AppointmentServiceDaoImpl">
-                        <property name="sessionFactory">
-                            <ref bean="sessionFactory"/>
-                        </property>
-                    </bean>
-                </property>
+                <property name="appointmentServiceDao" ref="appointmentServiceDao"/>
                 <property name="appointmentsService">
                     <ref bean="appointmentsService"/>
                 </property>
@@ -250,6 +275,41 @@
     <bean id="appointmentServiceAttributeTypeDao" class="org.openmrs.module.appointments.dao.impl.AppointmentServiceAttributeTypeDaoImpl">
         <property name="sessionFactory">
             <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+
+    <bean id="appointmentSlotAvailabilityService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager" ref="transactionManager"/>
+        <property name="target">
+            <bean class="org.openmrs.module.appointments.service.impl.AppointmentSlotAvailabilityServiceImpl">
+                <property name="appointmentServiceDao" ref="appointmentServiceDao"/>
+                <property name="appointmentDao" ref="appointmentDao"/>
+                <property name="appointmentUnavailabilityDao" ref="appointmentUnavailabilityDao"/>
+            </bean>
+        </property>
+        <property name="preInterceptors" ref="serviceInterceptors"/>
+        <property name="transactionAttributeSource" ref="transactionAttributeSource"/>
+    </bean>
+
+    <bean id="appointmentUnavailabilityConflict" class="org.openmrs.module.appointments.conflicts.impl.AppointmentUnavailabilityConflict">
+        <property name="appointmentSlotAvailabilityService" ref="appointmentSlotAvailabilityService"/>
+    </bean>
+
+    <bean id="appointmentSlotCapacityValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentSlotCapacityValidator">
+        <property name="appointmentSlotAvailabilityService" ref="appointmentSlotAvailabilityService"/>
+    </bean>
+
+    <bean id="appointmentBookingWindowValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentBookingWindowValidator"/>
+    <bean id="appointmentLeadTimeValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentLeadTimeValidator"/>
+    <bean id="appointmentCancellationValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentCancellationValidator"/>
+    <bean id="appointmentCancellationStatusChangeValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentCancellationStatusChangeValidator"/>
+
+    <bean parent="serviceContext">
+        <property name="moduleService">
+            <list merge="true">
+                <value>org.openmrs.module.appointments.service.AppointmentSlotAvailabilityService</value>
+                <ref bean="appointmentSlotAvailabilityService"/>
+            </list>
         </property>
     </bean>
 

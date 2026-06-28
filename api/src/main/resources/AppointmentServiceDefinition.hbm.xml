@@ -14,6 +14,7 @@
         <property name="startTime" type="java.sql.Time" column="start_time"/>
         <property name="endTime" type="java.sql.Time" column="end_time"/>
         <property name="maxAppointmentsLimit" type="java.lang.Integer" column="max_appointments_limit"/>
+        <property name="maxAppointmentsPerSlot" type="java.lang.Integer" column="max_appointments_per_slot" />
         <property name="durationMins" type="java.lang.Integer" column="duration_mins"/>
         <property name="color" type="java.lang.String" column="color" length="8" not-null="false" />
         <property name="initialAppointmentStatus" column="initial_appointment_status">
@@ -36,6 +37,7 @@
         <many-to-one name="creator" class="org.openmrs.User" column="creator" not-null="true"/>
         <many-to-one name="location" class="org.openmrs.Location" column="location_id"/>
         <many-to-one name="speciality" class="org.openmrs.module.appointments.model.Speciality" column="speciality_id"/>
+        <many-to-one name="provider" class="org.openmrs.Provider" column="provider_id" />
         <set name="weeklyAvailability" lazy="false" inverse="true" batch-size="100" cascade="all-delete-orphan" order-by="voided asc"  access="field">
             <key column="service_id" />
             <one-to-many class="org.openmrs.module.appointments.model.ServiceWeeklyAvailability" />
@@ -48,5 +50,15 @@
             <key column="appointment_service_id"/>
             <one-to-many class="org.openmrs.module.appointments.model.AppointmentServiceAttribute"/>
         </set>
+        <property name="bookAheadDays" type="java.lang.Integer" column="book_ahead_days" />
+        <property name="leadTimeMinutes" type="java.lang.Integer" column="lead_time_minutes" />
+        <property name="allowPatientBooking" type="java.lang.Boolean" column="allow_patient_booking" not-null="true" />
+        <property name="serviceMode" column="service_mode" not-null="true">
+            <type name="org.hibernate.type.EnumType">
+                <param name="enumClass">org.openmrs.module.appointments.model.AppointmentServiceMode</param>
+                <param name="useNamed">true</param>
+            </type>
+        </property>
+        <property name="cancellationCutoffMinutes" type="java.lang.Integer" column="cancellation_cutoff_minutes" />
     </class>
 </hibernate-mapping>

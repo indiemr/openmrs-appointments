@@ -997,4 +997,125 @@
             <column name="end_date"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="add_provider_id_to_appointment_service" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_service" columnName="provider_id" />
+            </not>
+        </preConditions>
+        <comment>Add optional provider to appointment service for doctor-linked services</comment>
+        <addColumn tableName="appointment_service">
+            <column name="provider_id" type="int">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+        <addForeignKeyConstraint 
+            constraintName="fk_appointment_service_provider"
+            baseTableName="appointment_service"
+            baseColumnNames="provider_id"
+            referencedTableName="provider"
+            referencedColumnNames="provider_id"
+        />
+        <createIndex indexName="idx_appointment_service_provider" tableName="appointment_service">
+            <column name="provider_id" />
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="add_max_appointments_per_slot_to_appointment_service" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_service" columnName="max_appointments_per_slot" />
+            </not>
+        </preConditions>
+        <comment>Max patients or appointments per slot at service level (default)</comment>
+        <addColumn tableName="appointment_service">
+            <column name="max_appointments_per_slot" type="int">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="add_max_appointments_per_slot_to_weekly_availability" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_service_weekly_availability" columnName="max_appointments_per_slot" />
+            </not>
+        </preConditions>
+        <comment>Per-day override for max patients per time slot</comment>
+        <addColumn tableName="appointment_service_weekly_availability">
+            <column name="max_appointments_per_slot" type="int">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="add_book_ahead_days_to_appointment_service" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_service" columnName="book_ahead_days" />
+            </not>
+        </preConditions>
+        <comment>Max days into the future patients can book appointments</comment>
+        <addColumn tableName="appointment_service">
+            <column name="book_ahead_days" type="int">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="add_lead_time_to_appointment_service" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_service" columnName="lead_time_minutes" />
+            </not>
+        </preConditions>
+        <comment>Patient should book appointment in advance before the lead time minutes</comment>
+        <addColumn tableName="appointment_service">
+            <column name="lead_time_minutes" type="int">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="add_allow_patient_booking_to_appointment_service" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_service" columnName="allow_patient_booking" />
+            </not>
+        </preConditions>
+        <comment>Allow patients can book appointment under these appointment service</comment>
+        <addColumn tableName="appointment_service">
+            <column name="allow_patient_booking" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="add_service_mode_to_appointment_service" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_service" columnName="service_mode" />
+            </not>
+        </preConditions>
+        <comment>Consultation mode for appointment service: Inclinic or Tele consultation</comment>
+        <addColumn tableName="appointment_service">
+            <column name="service_mode" type="varchar(45)" defaultValue="InClinic">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="add_cancellation_cutoff_minutes_to_appointment_service" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_service" columnName="cancellation_cutoff_minutes" />
+            </not>
+        </preConditions>
+        <addColumn tableName="appointment_service">
+            <column name="cancellation_cutoff_minutes" type="int">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

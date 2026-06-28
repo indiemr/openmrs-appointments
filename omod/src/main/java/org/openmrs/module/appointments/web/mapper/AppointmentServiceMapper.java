@@ -6,6 +6,7 @@ import org.openmrs.api.LocationService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.appointments.model.AppointmentServiceAttribute;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
+import org.openmrs.module.appointments.model.AppointmentServiceMode;
 import org.openmrs.module.appointments.model.AppointmentServiceType;
 import org.openmrs.module.appointments.model.AppointmentStatus;
 import org.openmrs.module.appointments.model.ServiceWeeklyAvailability;
@@ -14,9 +15,12 @@ import org.openmrs.module.appointments.model.AppointmentServiceAttributeType;
 import org.openmrs.module.appointments.service.AppointmentServiceAttributeTypeService;
 import org.openmrs.module.appointments.service.AppointmentServiceDefinitionService;
 import org.openmrs.module.appointments.service.SpecialityService;
+import org.openmrs.module.appointments.util.AppointmentBookingRulesUtil;
 import org.openmrs.module.appointments.web.contract.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.openmrs.Provider;
+import org.openmrs.api.ProviderService;
 
 import java.sql.Time;
 import java.util.*;
@@ -36,6 +40,9 @@ public class AppointmentServiceMapper {
     @Autowired
     AppointmentServiceAttributeTypeService appointmentServiceAttributeTypeService;
 
+    @Autowired 
+    ProviderService providerService;
+
     public AppointmentServiceDefinition fromDescription(AppointmentServiceDescription appointmentServiceDescription) {
         AppointmentServiceDefinition appointmentServiceDefinition;
         if (!StringUtils.isBlank(appointmentServiceDescription.getUuid())) {
@@ -49,8 +56,28 @@ public class AppointmentServiceMapper {
         appointmentServiceDefinition.setStartTime(appointmentServiceDescription.getStartTime());
         appointmentServiceDefinition.setEndTime(appointmentServiceDescription.getEndTime());
         appointmentServiceDefinition.setMaxAppointmentsLimit(appointmentServiceDescription.getMaxAppointmentsLimit());
+        appointmentServiceDefinition.setMaxAppointmentsPerSlot(appointmentServiceDescription.getMaxAppointmentsPerSlot());
         appointmentServiceDefinition.setColor(appointmentServiceDescription.getColor());
+        Boolean allowPatientBooking = appointmentServiceDescription.getAllowPatientBooking();
+        if (allowPatientBooking != null) {
+            appointmentServiceDefinition.setAllowPatientBooking(allowPatientBooking);
+        } else if (appointmentServiceDefinition.getAllowPatientBooking() == null) {
+            // new service, or existing row never had value loaded
+            appointmentServiceDefinition.setAllowPatientBooking(Boolean.TRUE);
+        }
 
+        String serviceMode = appointmentServiceDescription.getServiceMode();
+        if(StringUtils.isNotBlank(serviceMode)) {
+            try {
+                appointmentServiceDefinition.setServiceMode(AppointmentServiceMode.valueOf(serviceMode));
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("serviceMode must be InClinic or TeleConsultation");
+            }
+        } else if (appointmentServiceDefinition.getServiceMode() == null) {
+            appointmentServiceDefinition.setServiceMode(AppointmentServiceMode.InClinic);
+        }
+
+        // on edit: if omitted, keep existing DB value
         String initialAppointmentStatus = appointmentServiceDescription.getInitialAppointmentStatus();
         if (StringUtils.isNotBlank(initialAppointmentStatus)) {
             appointmentServiceDefinition.setInitialAppointmentStatus(AppointmentStatus.valueOf(initialAppointmentStatus));
@@ -61,6 +88,18 @@ public class AppointmentServiceMapper {
         String locationUuid = appointmentServiceDescription.getLocationUuid();
         Location location = locationService.getLocationByUuid(locationUuid);
         appointmentServiceDefinition.setLocation(location);
+
+        String providerUuid = appointmentServiceDescription.getProviderUuid();
+        if (StringUtils.isNotBlank(providerUuid)) {
+            Provider provider = providerService.getProviderByUuid(providerUuid);
+            appointmentServiceDefinition.setProvider(provider);
+        } else if (StringUtils.isBlank(appointmentServiceDescription.getUuid())) {
+            // new service without provider
+            appointmentServiceDefinition.setProvider(null);
+        } 
+        // else if (appointmentServiceDescription.getProviderUuid() != null && appointmentServiceDescription.getProviderUuid().isEmpty()) {
+        //     appointmentServiceDefinition.setProvider(null);
+        // }
 
         String specialityUuid = appointmentServiceDescription.getSpecialityUuid();
         Speciality speciality = specialityService.getSpecialityByUuid(specialityUuid);
@@ -85,6 +124,14 @@ public class AppointmentServiceMapper {
         }
 
         validateAttributeCardinality(appointmentServiceDefinition);
+        AppointmentBookingRulesUtil.validateBookAheadDays(appointmentServiceDescription.getBookAheadDays());
+        appointmentServiceDefinition.setBookAheadDays(appointmentServiceDescription.getBookAheadDays());
+
+        AppointmentBookingRulesUtil.validateLeadTimeMinutes(appointmentServiceDescription.getLeadTimeMinutes());
+        appointmentServiceDefinition.setLeadTimeMinutes(appointmentServiceDescription.getLeadTimeMinutes());
+
+        AppointmentBookingRulesUtil.validateCancellationCutoffMinutes(appointmentServiceDescription.getCancellationCutoffMinutes());
+    appointmentServiceDefinition.setCancellationCutoffMinutes(appointmentServiceDescription.getCancellationCutoffMinutes());
 
         return appointmentServiceDefinition;
     }
@@ -189,6 +236,7 @@ public class AppointmentServiceMapper {
         availability.setMaxAppointmentsLimit(avb.getMaxAppointmentsLimit());
         availability.setService(appointmentServiceDefinition);
         availability.setVoided(avb.isVoided());
+        availability.setMaxAppointmentsPerSlot(avb.getMaxAppointmentsPerSlot());
 
         return availability;
     }
@@ -247,10 +295,22 @@ public class AppointmentServiceMapper {
         asResponse.setDurationMins(as.getDurationMins());
         asResponse.setMaxAppointmentsLimit(as.getMaxAppointmentsLimit());
         asResponse.setColor(as.getColor());
+        asResponse.setMaxAppointmentsPerSlot(as.getMaxAppointmentsPerSlot());
+        asResponse.setBookAheadDays(as.getBookAheadDays());
+        asResponse.setLeadTimeMinutes(as.getLeadTimeMinutes());
+        asResponse.setAllowPatientBooking(as.getAllowPatientBooking());
+        asResponse.setCancellationCutoffMinutes(as.getCancellationCutoffMinutes());
 
         AppointmentStatus initialAppointmentStatus = as.getInitialAppointmentStatus();
         if (null != initialAppointmentStatus){
             asResponse.setInitialAppointmentStatus(initialAppointmentStatus.name());
+        }
+
+        AppointmentServiceMode serviceMode = as.getServiceMode();
+        if (serviceMode != null) {
+            asResponse.setServiceMode(serviceMode.name());
+        } else {
+            asResponse.setServiceMode(AppointmentServiceMode.InClinic.name());
         }
 
         Map specialityMap = new HashMap();
@@ -266,6 +326,14 @@ public class AppointmentServiceMapper {
         if(location != null) {
             locationMap.put("name", location.getName());
             locationMap.put("uuid", location.getUuid());
+        }
+
+        Map providerMap = new HashMap<>();
+        Provider provider = as.getProvider();
+        if (provider != null) {
+            providerMap.put("name", provider.getName());
+            providerMap.put("uuid", provider.getUuid());
+            asResponse.setProvider(providerMap);
         }
         asResponse.setLocation(locationMap);
 
@@ -288,6 +356,7 @@ public class AppointmentServiceMapper {
         availabilityMap.put("endTime", convertTimeToString(availability.getEndTime()));
         availabilityMap.put("maxAppointmentsLimit", availability.getMaxAppointmentsLimit());
         availabilityMap.put("uuid", availability.getUuid());
+        availabilityMap.put("maxAppointmentsPerSlot", availability.getMaxAppointmentsPerSlot());
         return availabilityMap;
     }
 
@@ -329,5 +398,11 @@ public class AppointmentServiceMapper {
         return attributeTypes.stream()
                 .map(this::constructAttributeTypeResponse)
                 .collect(Collectors.toList());
+    }
+
+    private void validateMaxAppointmentsPerSlot(Integer value, String context) {
+        if (value != null && value < 1) {
+            throw new RuntimeException("maxAppointmentsPerSlot for " + context + " must be at least 1");
+        }
     }
 }

@@ -10,6 +10,7 @@ public class ServiceWeeklyAvailabilityDescription {
 	private Integer maxAppointmentsLimit;
 	private DayOfWeek dayOfWeek;
 	private boolean voided;
+	private Integer maxAppointmentsPerSlot;
 
 	public String getUuid() {
 		return uuid;
@@ -58,4 +59,12 @@ public class ServiceWeeklyAvailabilityDescription {
 	public void setVoided(boolean voided) {
 		this.voided = voided;
 	}
+
+	public Integer getMaxAppointmentsPerSlot() {
+        return maxAppointmentsPerSlot;
+    }
+
+    public void setMaxAppointmentsPerSlot(Integer maxAppointmentsPerSlot) {
+        this.maxAppointmentsPerSlot = maxAppointmentsPerSlot;
+    }
 }

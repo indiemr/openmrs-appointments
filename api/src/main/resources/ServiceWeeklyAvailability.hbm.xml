@@ -18,6 +18,7 @@
         <property name="startTime" type="java.sql.Time" column="start_time"/>
         <property name="endTime" type="java.sql.Time" column="end_time"/>
         <property name="maxAppointmentsLimit" type="java.lang.Integer" column="max_appointments_limit"/>
+        <property name="maxAppointmentsPerSlot" type="java.lang.Integer" column="max_appointments_per_slot"/>
 
         <property name="dateCreated" type="java.util.Date" column="date_created"/>
         <property name="dateChanged" type="java.util.Date" column="date_changed"/>
