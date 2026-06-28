@@ -11,6 +11,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.appointments.constants.SmsGlobalPropertyConstants;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.service.AppointmentArgumentsMapper;
 import org.openmrs.module.sms.api.service.OutgoingSms;
@@ -20,7 +21,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class AppointmentReminderSmsNotifier {
-    private static final String APPOINTMENT_REMINDER_SMS_CONFIG = "IndiEMR Appointment Reminder";
     private static final String APPOINTMENT_REMINDER_SMS_MESSAGE = "reminder";
     private static final String PERSON_ATTRIBUTE_TYPE_PHONE_NUMBER = "phoneNumber";
 
@@ -38,7 +38,10 @@ public class AppointmentReminderSmsNotifier {
     private OutgoingSms buildOutgoingSms(String phoneNumber, Appointment appointment,
             AppointmentArgumentsMapper appointmentArgumentsMapper) {
         Map<String, Object> customParams = buildCustomParams(appointment, appointmentArgumentsMapper);
-        return new OutgoingSms(APPOINTMENT_REMINDER_SMS_CONFIG, phoneNumber, APPOINTMENT_REMINDER_SMS_MESSAGE,
+        String smsConfig = Context.getAdministrationService().getGlobalProperty(
+            SmsGlobalPropertyConstants.REMINDER_TEMPLATE_CONFIG,
+            SmsGlobalPropertyConstants.DEFAULT_REMINDER_TEMPLATE_CONFIG);
+        return new OutgoingSms(smsConfig, phoneNumber, APPOINTMENT_REMINDER_SMS_MESSAGE,
                 customParams);
     }
 
