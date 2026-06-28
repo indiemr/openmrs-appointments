@@ -25,9 +25,9 @@
 	</developers>
 
 	<scm>
-		<connection>scm:git:git://github.com/bahmni/openmrs-module-appointments.git</connection>
-		<developerConnection>scm:git:https://github.com/Bahmni/openmrs-module-appointments.git</developerConnection>
-		<url>https://github.com/Bahmni/openmrs-module-appointments</url>
+		<connection>scm:git:git://github.com/indiemr/openmrs-appointments.git</connection>
+		<developerConnection>scm:git:https://github.com/indiemr/openmrs-appointments.git</developerConnection>
+		<url>https://github.com/indiemr/openmrs-appointments</url>
 	</scm>
 
 	<modules>
@@ -129,7 +129,7 @@
 			</plugins>
 		</pluginManagement>
 		<plugins>
-			<plugin>
+			<!-- <plugin>
 				<groupId>org.sonatype.central</groupId>
 				<artifactId>central-publishing-maven-plugin</artifactId>
 				<version>0.7.0</version>
@@ -137,7 +137,7 @@
 				<configuration>
 					<publishingServerId>nexus-sonatype</publishingServerId>
 				</configuration>
-			</plugin>
+			</plugin> -->
 			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
@@ -307,6 +307,13 @@
 					<updatePolicy>interval:10080</updatePolicy>
 				</snapshots>
 			</repository>
+			<repository>
+				<id>github-indiemr-appointments</id>
+				<url>https://maven.pkg.github.com/indiemr/openmrs-appointments</url>
+				<snapshots>
+				  <enabled>true</enabled>
+				</snapshots>
+			  </repository>
 		</repositories>
 
 	<pluginRepositories>
@@ -410,4 +417,16 @@
 		</profile>
 
 	</profiles>
+	<distributionManagement>
+		<repository>
+		  <id>github</id>
+		  <name>GitHub Packages</name>
+		  <url>https://maven.pkg.github.com/indiemr/openmrs-appointments</url>
+		</repository>
+		<snapshotRepository>
+		  <id>github</id>
+		  <name>GitHub Packages</name>
+		  <url>https://maven.pkg.github.com/indiemr/openmrs-appointments</url>
+		</snapshotRepository>
+	  </distributionManagement>
 </project>
