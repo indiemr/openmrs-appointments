@@ -6,6 +6,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Patient;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.appointments.constants.SmsGlobalPropertyConstants;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.service.AppointmentArgumentsMapper;
 import org.openmrs.module.sms.api.service.OutgoingSms;
@@ -20,9 +21,6 @@ import java.util.stream.Collectors;
 
 @Component
 public class AppointmentRescheduleSmsNotifier {
-
-    private static final String APPOINTMENT_RESCHEDULE_SMS_CONFIG = "IndiEMR Reschedule Appointment";
-    private static final String APPOINTMENT_UPDATE_SMS_CONFIG = "IndiEMR Reschedule Appointment";
     private static final String APPOINTMENT_RESCHEDULE_SMS_MESSAGE = "reschedule";
 
     private final Log log = LogFactory.getLog(this.getClass());
@@ -44,8 +42,11 @@ public class AppointmentRescheduleSmsNotifier {
     private OutgoingSms buildOutgoingSms(String phoneNumber, Appointment previousAppointment,
             Appointment rescheduledAppointment, AppointmentArgumentsMapper appointmentArgumentsMapper) {
         Map<String, Object> customParams = buildCustomParams(rescheduledAppointment, appointmentArgumentsMapper);
+        String smsConfig = Context.getAdministrationService().getGlobalProperty(
+            SmsGlobalPropertyConstants.RESCHEDULE_TEMPLATE_CONFIG,
+            SmsGlobalPropertyConstants.DEFAULT_RESCHEDULE_TEMPLATE_CONFIG);
 
-        return new OutgoingSms(APPOINTMENT_RESCHEDULE_SMS_CONFIG, phoneNumber, APPOINTMENT_RESCHEDULE_SMS_MESSAGE,
+        return new OutgoingSms(smsConfig, phoneNumber, APPOINTMENT_RESCHEDULE_SMS_MESSAGE,
                 customParams);
     }
 
@@ -64,8 +65,11 @@ public class AppointmentRescheduleSmsNotifier {
     private OutgoingSms buildOutgoingSmsForUpdate(String phoneNumber, Appointment updatedAppointment,
             AppointmentArgumentsMapper appointmentArgumentsMapper) {
         Map<String, Object> customParams = buildCustomParams(updatedAppointment, appointmentArgumentsMapper);
+        String smsConfig = Context.getAdministrationService().getGlobalProperty(
+            SmsGlobalPropertyConstants.UPDATE_TEMPLATE_CONFIG,
+            SmsGlobalPropertyConstants.DEFAULT_UPDATE_TEMPLATE_CONFIG);
 
-        return new OutgoingSms(APPOINTMENT_UPDATE_SMS_CONFIG, phoneNumber, APPOINTMENT_RESCHEDULE_SMS_MESSAGE,
+        return new OutgoingSms(smsConfig, phoneNumber, APPOINTMENT_RESCHEDULE_SMS_MESSAGE,
                 customParams);
     }
 

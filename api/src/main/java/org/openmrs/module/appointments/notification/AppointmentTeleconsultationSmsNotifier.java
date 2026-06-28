@@ -11,6 +11,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.appointments.constants.SmsGlobalPropertyConstants;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.service.AppointmentArgumentsMapper;
 import org.openmrs.module.sms.api.service.OutgoingSms;
@@ -20,8 +21,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class AppointmentTeleconsultationSmsNotifier {
-
-    private static final String TELE_SMS_CONFIG = "IndiEMR Tele Appointment";
     private static final String TELE_SMS_MESSAGE = "tele";
 
     private final Log log = LogFactory.getLog(this.getClass());
@@ -38,7 +37,10 @@ public class AppointmentTeleconsultationSmsNotifier {
     private OutgoingSms buildOutgoingSms(String phoneNumber, Appointment appointment,
         AppointmentArgumentsMapper appointmentArgumentsMapper) {
             Map<String, Object> customParams = buildCustomParams(appointment, appointmentArgumentsMapper);
-            return new OutgoingSms(TELE_SMS_CONFIG, phoneNumber, TELE_SMS_MESSAGE, customParams);
+            String smsConfig = Context.getAdministrationService().getGlobalProperty(
+                SmsGlobalPropertyConstants.TELECONSULTATION_TEMPLATE_CONFIG,
+                SmsGlobalPropertyConstants.DEFAULT_TELECONSULTATION_TEMPLATE_CONFIG);
+            return new OutgoingSms(smsConfig, phoneNumber, TELE_SMS_MESSAGE, customParams);
         }
 
     private Map<String, Object> buildCustomParams(Appointment appointment, AppointmentArgumentsMapper appointmentArgumentsMapper) {
@@ -116,10 +118,7 @@ public class AppointmentTeleconsultationSmsNotifier {
         } catch (Exception e) {
             log.error("Failed to send teleconsultation SMS", e);
         } finally {
-            Context.getUserContext().removeProxyPrivilege(PrivilegeConstants.SMS_MODULE_PRIVILEGE);;
+            Context.getUserContext().removeProxyPrivilege(PrivilegeConstants.SMS_MODULE_PRIVILEGE);
         }
     }
-
-
-    
 }
