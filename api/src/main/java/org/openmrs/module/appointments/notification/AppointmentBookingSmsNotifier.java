@@ -4,6 +4,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.appointments.constants.SmsGlobalPropertyConstants;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.service.AppointmentArgumentsMapper;
 import org.openmrs.module.sms.api.service.OutgoingSms;
@@ -20,8 +21,6 @@ import java.util.stream.Collectors;
 
 @Component
 public class AppointmentBookingSmsNotifier {
-
-    private static final String APPOINTMENT_SMS_CONFIG = "Appointment";
     private static final String APPOINTMENT_SMS_MESSAGE = "hi";
 
     private final Log log = LogFactory.getLog(this.getClass());
@@ -40,22 +39,43 @@ public class AppointmentBookingSmsNotifier {
             AppointmentArgumentsMapper appointmentArgumentsMapper) {
         Map<String, Object> customParams = new HashMap<>();
 
-        String providerNames = getProviderNames(
-                appointmentArgumentsMapper.getProvidersNameInString(appointment));
-        customParams.put("var1", formatConsultationWithProvider(providerNames));
+        Map<String, String> arguments = appointmentArgumentsMapper.createArgumentsMapForAppointmentBooking(appointment);
 
+        String patientName = arguments.get("patientname") != null ? arguments.get("patientname") : "";
+        String providerNames = getProviderNames(appointmentArgumentsMapper.getProvidersNameInString(appointment));
+        String appointmentDate = arguments.get("date") != null ? arguments.get("date") : "";
+        String appointmentTime = getAppointmentTime12Hour(appointment);
         String locationName = getLocationName(appointment, appointmentArgumentsMapper);
-        String timing = getAppointmentTime12Hour(appointment);
-        customParams.put("var2", formatLocationAtTiming(locationName, timing));
 
-        return new OutgoingSms(APPOINTMENT_SMS_CONFIG, phoneNumber, APPOINTMENT_SMS_MESSAGE, customParams);
+        customParams.put("var1", patientName);
+        customParams.put("var2", providerNames);
+        customParams.put("var3", appointmentDate);
+        customParams.put("var4", appointmentTime);
+        customParams.put("var5", locationName);
+
+        String smsConfig = Context.getAdministrationService().getGlobalProperty(
+            SmsGlobalPropertyConstants.BOOKING_TEMPLATE_CONFIG,
+            SmsGlobalPropertyConstants.DEFAULT_BOOKING_TEMPLATE_CONFIG);
+        return new OutgoingSms(smsConfig, phoneNumber, APPOINTMENT_SMS_MESSAGE, customParams);
     }
 
     private String getProviderNames(List<String> providerNames) {
         if (providerNames == null || providerNames.isEmpty()) {
             return "";
         }
-        return providerNames.stream().filter(StringUtils::isNotBlank).collect(Collectors.joining(", "));
+        return providerNames.stream().filter(StringUtils::isNotBlank).map(this::formatProviderNameWithPrefix).collect(Collectors.joining(", "));
+    }
+
+    private String formatProviderNameWithPrefix(String name) {
+        String trimmed = name.trim();
+        if (StringUtils.isBlank(trimmed)) {
+            return "";
+        }
+        // Avoid "Dr. Dr. NH" if name already has a title
+        if (trimmed.matches("(?i)^(dr\\.?|doctor)\\s+.*")) {
+            return trimmed;
+        }
+        return "Dr. " + trimmed;
     }
 
     private String getLocationName(Appointment appointment, AppointmentArgumentsMapper appointmentArgumentsMapper) {

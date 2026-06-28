@@ -86,20 +86,23 @@
 		<defaultValue>false</defaultValue>
 		<description>Disable default appointment validations</description>
 	</globalProperty>
+
 	<globalProperty>
 		<property>SchedulerMarksComplete</property>
 		<defaultValue>false</defaultValue>
 		<description>Scheduler marks checked in appointments as complete when it turned on</description>
 	</globalProperty>
+
 	<globalProperty>
 		<property>SchedulerMarksMissed</property>
 		<defaultValue>false</defaultValue>
 		<description>Scheduler marks scheduled appointments as missed when it is turned on</description>
 	</globalProperty>
+
 	<globalProperty>
-	<property>SchedulerReminderBeforeHours</property>
-	<defaultValue>24</defaultValue>
-	<description>How many hours before the appointment should the reminder SMS be sent</description>
+		<property>SchedulerReminderBeforeHours</property>
+		<defaultValue>24</defaultValue>
+		<description>How many hours before the appointment should the reminder SMS be sent</description>
 	</globalProperty>
 
 	<globalProperty>
@@ -183,7 +186,42 @@
 		<defaultValue>15</defaultValue>
 		<description>Default appointment slot duration in minutes when service/service type duration is not configured</description>
 	</globalProperty>
+	
+	<globalProperty>
+		<property>sms.enableTeleconsultationSMSAlert</property>
+		<defaultValue>false</defaultValue>
+		<description>Send SMS when a virtual (teleconsultation) appointment is booked/updated/rescheduled</description>
+	</globalProperty>
 
+	<globalProperty>
+		<property>sms.appointmentBookingTemplateConfig</property>
+		<defaultValue>IndiEMR New Appointment</defaultValue>
+		<description>SMS provider template name for new appointment booking notifications</description>
+	</globalProperty>
+	
+	<globalProperty>
+		<property>sms.appointmentReminderTemplateConfig</property>
+		<defaultValue>IndiEMR Appointment Reminder</defaultValue>
+		<description>SMS provider template name for appointment reminder notifications</description>
+	</globalProperty>
+	
+	<globalProperty>
+		<property>sms.appointmentRescheduleTemplateConfig</property>
+		<defaultValue>IndiEMR Reschedule Appointment</defaultValue>
+		<description>SMS provider template name for rescheduled appointment notifications</description>
+	</globalProperty>
+	
+	<globalProperty>
+		<property>sms.appointmentUpdateTemplateConfig</property>
+		<defaultValue>IndiEMR Reschedule Appointment</defaultValue>
+		<description>SMS provider template name for updated appointment notifications</description>
+	</globalProperty>
+	
+	<globalProperty>
+		<property>sms.teleconsultationTemplateConfig</property>
+		<defaultValue>IndiEMR Tele Appointment</defaultValue>
+		<description>SMS provider template name for teleconsultation appointment notifications</description>
+	</globalProperty>
 
 	<privilege>
 		<name>app:appointments:manageServiceAvailability</name>

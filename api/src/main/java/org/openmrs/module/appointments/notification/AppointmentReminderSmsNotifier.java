@@ -11,6 +11,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.appointments.constants.SmsGlobalPropertyConstants;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.service.AppointmentArgumentsMapper;
 import org.openmrs.module.sms.api.service.OutgoingSms;
@@ -20,7 +21,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class AppointmentReminderSmsNotifier {
-    private static final String APPOINTMENT_REMINDER_SMS_CONFIG = "AppointmentReminder";
     private static final String APPOINTMENT_REMINDER_SMS_MESSAGE = "reminder";
     private static final String PERSON_ATTRIBUTE_TYPE_PHONE_NUMBER = "phoneNumber";
 
@@ -37,16 +37,11 @@ public class AppointmentReminderSmsNotifier {
 
     private OutgoingSms buildOutgoingSms(String phoneNumber, Appointment appointment,
             AppointmentArgumentsMapper appointmentArgumentsMapper) {
-        Map<String, Object> customParams = new HashMap<>();
-        String providerNames = getProviderNames(
-                appointmentArgumentsMapper.getProvidersNameInString(appointment));
-        customParams.put("var1", formatConsultationWithProvider(providerNames));
-        String locationName = getLocationName(appointment, appointmentArgumentsMapper);
-        String timing = getAppointmentTime12Hour(appointment);
-        customParams.put("var2", formatLocationAtTiming(locationName, timing));
-        // Map<String, String> arguments = appointmentArgumentsMapper.createArgumentsMapForAppointmentBooking(appointment);
-        // customParams.put("var3", arguments.get("date") != null ? arguments.get("date") : "");
-        return new OutgoingSms(APPOINTMENT_REMINDER_SMS_CONFIG, phoneNumber, APPOINTMENT_REMINDER_SMS_MESSAGE,
+        Map<String, Object> customParams = buildCustomParams(appointment, appointmentArgumentsMapper);
+        String smsConfig = Context.getAdministrationService().getGlobalProperty(
+            SmsGlobalPropertyConstants.REMINDER_TEMPLATE_CONFIG,
+            SmsGlobalPropertyConstants.DEFAULT_REMINDER_TEMPLATE_CONFIG);
+        return new OutgoingSms(smsConfig, phoneNumber, APPOINTMENT_REMINDER_SMS_MESSAGE,
                 customParams);
     }
 
@@ -54,13 +49,18 @@ public class AppointmentReminderSmsNotifier {
         if (providerNames == null || providerNames.isEmpty()) {
             return "";
         }
-        return providerNames.stream().filter(StringUtils::isNotBlank).collect(Collectors.joining(", "));
+        return providerNames.stream().filter(StringUtils::isNotBlank).map(this::formatProviderNameWithPrefix).collect(Collectors.joining(", "));
     }
 
-    private String getLocationName(Appointment appointment, AppointmentArgumentsMapper appointmentArgumentsMapper) {
-        Map<String, String> arguments = appointmentArgumentsMapper.createArgumentsMapForAppointmentBooking(appointment);
-        String facilityName = arguments.get("facilityname");
-        return facilityName != null ? facilityName : "";
+    private String formatProviderNameWithPrefix(String name) {
+        String trimmed = name.trim();
+        if (StringUtils.isBlank(trimmed)) {
+            return "";
+        }
+        if (trimmed.matches("(?i)^(dr\\.?|doctor)\\s+.*")) {
+            return trimmed;
+        }
+        return "Dr. " + trimmed;
     }
 
     private String getPhoneNumber(Appointment appointment) {
@@ -71,23 +71,6 @@ public class AppointmentReminderSmsNotifier {
         }
 
         return appointment.getPatient().getAttribute(PERSON_ATTRIBUTE_TYPE_PHONE_NUMBER).getValue();
-    }
-
-    private String formatConsultationWithProvider(String providerNames) {
-        if (StringUtils.isBlank(providerNames)) {
-            return "consultation";
-        }
-        return "consultation with " + providerNames;
-    }
-
-    private String formatLocationAtTiming(String locationName, String timing) {
-        if (StringUtils.isBlank(locationName)) {
-            return StringUtils.isNotBlank(timing) ? timing : "";
-        }
-        if (StringUtils.isBlank(timing)) {
-            return locationName;
-        }
-        return locationName + " at " + timing;
     }
 
     private String getAppointmentTime12Hour(Appointment appointment) {
@@ -108,6 +91,25 @@ public class AppointmentReminderSmsNotifier {
         } finally {
             Context.getUserContext().removeProxyPrivilege(PrivilegeConstants.SMS_MODULE_PRIVILEGE);
         }
+    }
+
+    private Map<String, Object> buildCustomParams(Appointment appointment, AppointmentArgumentsMapper appointmentArgumentsMapper) {
+        Map<String, Object> customParams = new HashMap<>();
+        Map<String, String> arguments = appointmentArgumentsMapper.createArgumentsMapForAppointmentBooking(appointment);
+
+        String patientName = arguments.get("patientname") != null ? arguments.get("patientname") : "";
+        String providerNames = getProviderNames(appointmentArgumentsMapper.getProvidersNameInString(appointment));
+        String appointmentDate = arguments.get("date") != null ? arguments.get("date") : "";
+        String appointmentTime = getAppointmentTime12Hour(appointment);
+        String locationName = arguments.get("facilityname") != null ? arguments.get("facilityname") : "";
+
+        customParams.put("var1", patientName);
+        customParams.put("var2", providerNames);
+        customParams.put("var3", appointmentDate);
+        customParams.put("var4", appointmentTime);
+        customParams.put("var5", locationName);
+
+        return customParams;
     }
 
 }
