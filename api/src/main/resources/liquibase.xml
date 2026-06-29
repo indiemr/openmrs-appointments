@@ -1118,4 +1118,18 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="add_billable_service_uuid_to_appointment_service" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_service" columnName="billable_service_uuid" />
+            </not>
+        </preConditions>
+        <comment>Link Billable Service with Appointment Service</comment>
+        <addColumn tableName="appointment_service">
+            <column name="billable_service_uuid" type="varchar(38)">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

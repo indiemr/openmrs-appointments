@@ -1,5 +1,7 @@
 package org.openmrs.module.appointments.web.mapper;
 
+import org.openmrs.module.Module;
+import org.openmrs.module.ModuleFactory;
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.Location;
 import org.openmrs.api.LocationService;
@@ -17,11 +19,14 @@ import org.openmrs.module.appointments.service.AppointmentServiceDefinitionServi
 import org.openmrs.module.appointments.service.SpecialityService;
 import org.openmrs.module.appointments.util.AppointmentBookingRulesUtil;
 import org.openmrs.module.appointments.web.contract.*;
+import org.openmrs.module.billing.api.model.BillableService;
+import org.openmrs.module.billing.api.IBillableItemsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.openmrs.Provider;
 import org.openmrs.api.ProviderService;
 
+import java.math.BigDecimal;
 import java.sql.Time;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -122,6 +127,8 @@ public class AppointmentServiceMapper {
             appointmentServiceDescription.getAttributes()
                     .forEach(attribute -> constructAppointmentServiceAttribute(attribute, appointmentServiceDefinition));
         }
+
+        appointmentServiceDefinition.setBillableServiceUuid(appointmentServiceDescription.getBillableServiceUuid());
 
         validateAttributeCardinality(appointmentServiceDefinition);
         AppointmentBookingRulesUtil.validateBookAheadDays(appointmentServiceDescription.getBookAheadDays());
@@ -346,6 +353,13 @@ public class AppointmentServiceMapper {
             asResponse.setAttributes(attributeResponses);
         }
 
+        if (StringUtils.isNotBlank(as.getBillableServiceUuid())) {
+            BillableServiceSummary summary = resolveBillableServiceSummary(as.getBillableServiceUuid());
+            if (summary != null) {
+                asResponse.setBillableService(summary);
+            }
+        }
+
         return asResponse;
     }
 
@@ -400,9 +414,35 @@ public class AppointmentServiceMapper {
                 .collect(Collectors.toList());
     }
 
-    private void validateMaxAppointmentsPerSlot(Integer value, String context) {
-        if (value != null && value < 1) {
-            throw new RuntimeException("maxAppointmentsPerSlot for " + context + " must be at least 1");
+    private BillableServiceSummary resolveBillableServiceSummary(String billableServiceUuid) {
+        if (!isBillingModuleStarted()) {
+            return null;
         }
+        try {
+            IBillableItemsService billableItemsService = Context.getService(IBillableItemsService.class);
+            BillableService billableService = billableItemsService.getByUuid(billableServiceUuid);
+            if (billableService == null) {
+                return null;
+            }
+            BillableServiceSummary summary = new BillableServiceSummary();
+            summary.setUuid(billableService.getUuid());
+            summary.setDisplay(billableService.getName());
+            summary.setAmount(resolveDefaultPrice(billableService));
+            return summary;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    
+    private boolean isBillingModuleStarted() {
+        Module billingModule = ModuleFactory.getModuleById("billing");
+        return billingModule != null && billingModule.isStarted();
+    }
+
+    private BigDecimal resolveDefaultPrice(BillableService bs) {
+        if (bs.getServicePrices() == null || bs.getServicePrices().isEmpty()) {
+            return null;
+        }
+        return bs.getServicePrices().get(0).getPrice();
     }
 }
