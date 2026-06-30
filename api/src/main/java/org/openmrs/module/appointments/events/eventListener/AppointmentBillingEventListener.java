@@ -2,7 +2,6 @@ package org.openmrs.module.appointments.events.eventListener;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openmrs.api.context.Context;
 import org.openmrs.module.appointments.events.AppointmentBookingEvent;
 import org.openmrs.module.appointments.events.AppointmentEventType;
 import org.openmrs.module.appointments.model.Appointment;
