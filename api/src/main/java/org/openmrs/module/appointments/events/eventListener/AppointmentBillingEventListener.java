@@ -1,5 +1,7 @@
 package org.openmrs.module.appointments.events.eventListener;
 
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.module.appointments.events.AppointmentBookingEvent;
@@ -7,7 +9,6 @@ import org.openmrs.module.appointments.events.AppointmentEventType;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.service.AppointmentBillingService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -18,7 +19,7 @@ public class AppointmentBillingEventListener {
     @Autowired
     private AppointmentBillingService appointmentBillingService;
 
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onApplicationEvent(AppointmentBookingEvent event) {
         if (event.eventType != AppointmentEventType.BAHMNI_APPOINTMENT_CREATED) {
             return;
@@ -33,7 +34,6 @@ public class AppointmentBillingEventListener {
             appointmentBillingService.createBillForAppointment(appointment);
         } catch (Exception e) {
             log.error("Failed to create bill for appointment " + appointment.getUuid(), e);
-            throw new RuntimeException("Failed to create bill for appointment: " + e.getMessage(), e);
         }
     }
 }
