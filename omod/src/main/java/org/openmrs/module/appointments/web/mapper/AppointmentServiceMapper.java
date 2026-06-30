@@ -2,6 +2,8 @@ package org.openmrs.module.appointments.web.mapper;
 
 import org.openmrs.module.Module;
 import org.openmrs.module.ModuleFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.Location;
 import org.openmrs.api.LocationService;
@@ -47,6 +49,8 @@ public class AppointmentServiceMapper {
 
     @Autowired 
     ProviderService providerService;
+
+    private static final Log log = LogFactory.getLog(AppointmentServiceMapper.class);
 
     public AppointmentServiceDefinition fromDescription(AppointmentServiceDescription appointmentServiceDescription) {
         AppointmentServiceDefinition appointmentServiceDefinition;
@@ -415,9 +419,10 @@ public class AppointmentServiceMapper {
     }
 
     private BillableServiceSummary resolveBillableServiceSummary(String billableServiceUuid) {
-        if (!isBillingModuleStarted()) {
-            return null;
-        }
+        // if (!isBillingModuleStarted()) {
+        //     log.warn("Billing module is not started; skipping billableService enrichment for uuid: " + billableServiceUuid);
+        //     return null;
+        // }
         try {
             IBillableItemsService billableItemsService = Context.getService(IBillableItemsService.class);
             BillableService billableService = billableItemsService.getByUuid(billableServiceUuid);

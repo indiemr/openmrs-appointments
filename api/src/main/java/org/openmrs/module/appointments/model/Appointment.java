@@ -55,6 +55,14 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
      */
     private Boolean sendSms;
 
+    private String billUuid;
+
+    /**
+     * Transient request-time flag. Not persisted.
+     * When true, create a bill for this appointment after save.
+     */
+    private Boolean createBill;
+
     /**
      * This attribute is not a entity property. Just a placeholder for the clients to prepare response relevant  to notification
      */
@@ -264,6 +272,22 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
     
     public List<NotificationResult> getNotificationResults() {
         return notificationResults;
+    }
+
+    public String getBillUuid() {
+        return billUuid;
+    }
+    
+    public void setBillUuid(String billUuid) {
+        this.billUuid = billUuid;
+    }
+    
+    public Boolean getCreateBill() {
+        return createBill;
+    }
+    
+    public void setCreateBill(Boolean createBill) {
+        this.createBill = createBill;
     }
 
     @Override

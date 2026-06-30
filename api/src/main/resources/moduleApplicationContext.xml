@@ -435,4 +435,8 @@
         </property>
     </bean>
 
+    <bean id="appointmentBillingService"
+        class="org.openmrs.module.appointments.service.impl.AppointmentBillingServiceImpl">
+        <property name="appointmentDao" ref="appointmentDao" />
+    </bean>
 </beans>
