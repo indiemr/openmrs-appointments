@@ -29,6 +29,7 @@ import org.openmrs.module.billing.api.model.CashierItemPrice;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class AppointmentBillingServiceImpl implements AppointmentBillingService {
@@ -101,6 +102,33 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
         return savedBill.getUuid();
     }
 
+    @Override
+    public void voidBillForAppointment(Appointment appointment, String voidReason) {
+        if (appointment == null || StringUtils.isBlank(voidReason) || StringUtils.isBlank(appointment.getBillUuid())) {
+            return;
+        }
+
+        try {
+        IBillService billService = Context.getService(IBillService.class);
+        Bill bill = billService.getByUuid(appointment.getBillUuid());
+
+        if (bill == null || Boolean.TRUE.equals(bill.getVoided())) {
+            return;
+        }
+
+        // Only auto-void unpaid bills
+        if (BillStatus.PAID.equals(bill.getStatus())) {
+            log.warn("Bill " + bill.getUuid() + " is PAID; not voiding on appointment cancel");
+            return;
+        }
+        billService.voidEntity(bill, voidReason);
+        log.info("Voided bill " + bill.getUuid() + " for cancelled appointment " + appointment.getUuid());                
+        
+        } catch (Exception e) {
+            log.error("Failed to void bill for appointment " + appointment.getUuid(), e);
+        }
+    }
+
     private boolean isBillingModuleStarted() {
         Module billingModule = ModuleFactory.getModuleById("billing");
         return billingModule != null && billingModule.isStarted();
@@ -111,7 +139,7 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
         if (prices == null || prices.isEmpty()) {
             return null;
         }
-        return prices.get(0).getPrice();
+        return prices.stream().map(price -> price.getPrice()).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private Provider resolveCashier(Appointment appointment) {

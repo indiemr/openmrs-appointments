@@ -448,6 +448,6 @@ public class AppointmentServiceMapper {
         if (bs.getServicePrices() == null || bs.getServicePrices().isEmpty()) {
             return null;
         }
-        return bs.getServicePrices().get(0).getPrice();
+        return bs.getServicePrices().stream().map(price -> price.getPrice()).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
