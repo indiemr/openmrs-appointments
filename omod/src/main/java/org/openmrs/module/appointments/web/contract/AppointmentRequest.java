@@ -26,6 +26,15 @@ public class AppointmentRequest {
     private String priority;
     private List<String> reasonConceptUuids;
     private Boolean sendSms;
+    private Boolean createBill;
+
+    public Boolean getCreateBill() {
+        return createBill;
+    }
+
+    public void setCreateBill(Boolean createBill) {
+        this.createBill = createBill;
+    }
 
     public Boolean getSendSms() {
         return sendSms;

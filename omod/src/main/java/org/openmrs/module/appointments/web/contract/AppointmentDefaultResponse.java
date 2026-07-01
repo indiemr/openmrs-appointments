@@ -29,6 +29,7 @@ public class AppointmentDefaultResponse {
 	private String teleconsultationLink;
 	private String priority;
 	private List<AppointmentReasonResponse> reasons;
+	private AppointmentBillSummary bill;
 
 	public String getUuid() {
 		return uuid;
@@ -211,5 +212,13 @@ public class AppointmentDefaultResponse {
 
 	public void setReasons(List<AppointmentReasonResponse> reasons) {
 		this.reasons = reasons;
+	}
+
+	public AppointmentBillSummary getBill() {
+		return bill;
+	}
+	
+	public void setBill(AppointmentBillSummary bill) {
+		this.bill = bill;
 	}
 }

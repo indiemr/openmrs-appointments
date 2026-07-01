@@ -1,5 +1,9 @@
 package org.openmrs.module.appointments.web.mapper;
 
+import org.openmrs.module.Module;
+import org.openmrs.module.ModuleFactory;
+import org.openmrs.module.billing.api.IBillService;
+import org.openmrs.module.billing.api.model.Bill;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -23,6 +27,7 @@ import org.openmrs.module.appointments.model.AppointmentServiceType;
 import org.openmrs.module.appointments.model.AppointmentStatus;
 import org.openmrs.module.appointments.service.AppointmentServiceDefinitionService;
 import org.openmrs.module.appointments.service.AppointmentsService;
+import org.openmrs.module.appointments.web.contract.AppointmentBillSummary;
 import org.openmrs.module.appointments.web.contract.AppointmentDefaultResponse;
 import org.openmrs.module.appointments.web.contract.AppointmentProviderDetail;
 import org.openmrs.module.appointments.web.contract.AppointmentQuery;
@@ -125,6 +130,7 @@ public class AppointmentMapper {
         appointment.setAppointmentKind(AppointmentKind.valueOf(appointmentRequest.getAppointmentKind()));
         appointment.setComments(appointmentRequest.getComments());
         appointment.setSendSms(appointmentRequest.getSendSms());
+        appointment.setCreateBill(appointmentRequest.getCreateBill());
         if (appointmentRequest.getPriority() != null || StringUtils.isNotBlank(appointmentRequest.getPriority())) {
                 appointment.setPriority(AppointmentPriority.valueOf(appointmentRequest.getPriority()));
         }
@@ -282,6 +288,13 @@ public class AppointmentMapper {
         response.setReasons(mapAppointmentReasons(a.getReasons()));
         response.setRecurring(a.isRecurring());
         response.setVoided(a.getVoided());
+        if (StringUtils.isNotBlank(a.getBillUuid())) {
+            AppointmentBillSummary billSummary = resolveAppointmentBillSummary(a.getBillUuid());
+            if (billSummary != null) {
+                response.setBill(billSummary);
+            }
+        }
+        
         HashMap extensions = new HashMap();
         extensions.put("patientEmailDefined", isPatientEmailDefined(a));
         response.setExtensions(extensions);
@@ -317,6 +330,35 @@ public class AppointmentMapper {
             }
         }
         return providerList;
+    }
+
+    private AppointmentBillSummary resolveAppointmentBillSummary(String billUuid) {
+        // if (!isBillingModuleStarted()) {
+        //     return null;
+        // }
+        try {
+            Bill bill = Context.getService(IBillService.class).getByUuid(billUuid);
+            if (bill == null) {
+                return null;
+            }
+            AppointmentBillSummary summary = new AppointmentBillSummary();
+            summary.setUuid(bill.getUuid());
+            summary.setAmount(bill.getTotal());
+            summary.setStatus(bill.getStatus() != null ? bill.getStatus().name() : null);
+            if (bill.getLineItems() != null && !bill.getLineItems().isEmpty()
+                    && bill.getLineItems().get(0).getBillableService() != null) {
+                summary.setDisplay(bill.getLineItems().get(0).getBillableService().getName());
+            }
+            return summary;
+        } catch (Exception e) {
+            log.warn("Could not resolve bill for appointment", e);
+            return null;
+        }
+    }
+    
+    private boolean isBillingModuleStarted() {
+        Module billingModule = ModuleFactory.getModuleById("billing");
+        return billingModule != null && billingModule.isStarted();
     }
 
     private List<AppointmentReasonResponse> mapAppointmentReasons(Set<AppointmentReason> reasons) {

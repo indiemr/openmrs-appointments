@@ -25,6 +25,7 @@ public class AppointmentServiceDefaultResponse {
 	private Integer cancellationCutoffMinutes;
 	private Boolean allowPatientBooking;
 	private String serviceMode;
+	private BillableServiceSummary billableService;
 
 	public String getServiceMode() {
 		return serviceMode; 
@@ -194,4 +195,12 @@ public class AppointmentServiceDefaultResponse {
     public void setAllowPatientBooking(Boolean allowPatientBooking) {
         this.allowPatientBooking = allowPatientBooking;
     }
+
+	public BillableServiceSummary getBillableService() {
+		return billableService;
+	}
+
+	public void setBillableService(BillableServiceSummary billableService) {
+		this.billableService = billableService;
+	}
 }

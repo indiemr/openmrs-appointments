@@ -52,6 +52,9 @@
         <property name="dateVoided" type="java.util.Date" column="date_voided" length="19" />
         <property name="voidReason" type="java.lang.String" column="void_reason" length="255" />
         <property name="teleHealthVideoLink" type="java.lang.String" column="tele_health_video_link" length="255"/>
+        
+        <property name="billUuid" type="java.lang.String" column="bill_uuid" length="38"/>
+        
         <many-to-one name="voidedBy" class="org.openmrs.User" column="voided_by" />
         <many-to-one name="changedBy" class="org.openmrs.User" column="changed_by" />
         <many-to-one name="creator" class="org.openmrs.User" column="creator" not-null="true"/>
@@ -79,6 +82,6 @@
             <key column="patient_appointment_id"/>
             <many-to-one name="appointmentRecurringPattern" column="patient_appointment_timings_id"/>
         </join>
-
+        
     </class>
 </hibernate-mapping>
