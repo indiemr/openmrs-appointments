@@ -15,13 +15,13 @@
 	<require_modules>
 		<require_module>org.openmrs.module.webservices.rest</require_module>
 		<require_module>org.bahmni.module.teleconsultation</require_module>
+		<require_module version="1.3.3">org.openmrs.module.billing</require_module>
 	</require_modules>
 
 	<aware_of_modules>
 		<aware_of_module version="${openmrsAtomfeedVersion}">org.ict4h.openmrs.openmrs-atomfeed</aware_of_module>
 		<aware_of_module version="${communications.version}">org.bahmni.module.communication</aware_of_module>
 		<aware_of_module version="${sms.module.version}">org.openmrs.module.sms</aware_of_module>
-		<aware_of_module version="1.3.3">org.openmrs.module.billing</aware_of_module>
 	</aware_of_modules>
 
 	<conditional_resources>
