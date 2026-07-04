@@ -168,7 +168,15 @@ public class AppointmentsServiceImpl implements AppointmentsService {
 
     private void setupTeleconsultation(Appointment appointment) {
         if (isVirtual(appointment)) {
-            appointment.setTeleHealthVideoLink(teleconsultationAppointmentService.generateTeleconsultationLink(appointment.getUuid()));
+            String shortUuid = Arrays.stream(appointment.getUuid().toString().split("-"))
+                .limit(3)
+                .collect(Collectors.joining("-"));
+
+            appointment.setTeleHealthVideoLink(
+                teleconsultationAppointmentService.generateTeleconsultationLink(shortUuid)
+            );
+            // appointment.setTeleHealthVideoLink(teleconsultationAppointmentService.generateTeleconsultationLink(appointment.getUuid()));
+            // appointment.setTeleHealthVideoLink(teleconsultationAppointmentService.generateTeleconsultationLink(appointment.getAppointmentNumber()));
         }
     }
 

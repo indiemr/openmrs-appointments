@@ -9,8 +9,10 @@ import org.openmrs.module.appointments.events.AppointmentBookingEvent;
 import org.openmrs.module.appointments.events.AppointmentRescheduledEvent;
 import org.openmrs.module.appointments.events.RecurringAppointmentEvent;
 import org.openmrs.module.appointments.model.Appointment;
+import org.openmrs.module.appointments.model.AppointmentKind;
 import org.openmrs.module.appointments.notification.AppointmentBookingSmsNotifier;
 import org.openmrs.module.appointments.notification.AppointmentRescheduleSmsNotifier;
+import org.openmrs.module.appointments.notification.AppointmentTeleconsultationSmsNotifier;
 import org.openmrs.module.appointments.service.AppointmentArgumentsMapper;
 import org.openmrs.util.PrivilegeConstants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,9 @@ public class AppointmentSMSEventListener {
 
     @Autowired
     private AppointmentRescheduleSmsNotifier appointmentRescheduleSmsNotifier;
+
+    @Autowired
+    private AppointmentTeleconsultationSmsNotifier appointmentTeleconsultationSmsNotifier;
 
     @Async("AppointmentsAsyncThreadExecutor")
     @EventListener
@@ -82,6 +87,16 @@ public class AppointmentSMSEventListener {
     }
 
     private void handleAppointmentCreatedEvent(Appointment appointment) {
+        // Tele consultation appointment sms
+        if (isVirtualAppointment(appointment)) {
+            if (!shouldSendTeleconsultationSms(appointment)) {
+                return;
+            }
+            appointmentTeleconsultationSmsNotifier.sendTeleconsultationSms(appointment, appointmentArgumentsMapper);
+            return;
+        }
+
+        // Scheduled appointment sms
         if (!shouldSendBookingSms(appointment)) {
             return;
         }
@@ -89,6 +104,13 @@ public class AppointmentSMSEventListener {
     }
 
     private void handleAppointmentUpdatedEvent(Appointment appointment) {
+        if (isVirtualAppointment(appointment)) {
+            if (!shouldSendTeleconsultationSms(appointment)) {
+                return;
+            }
+            appointmentTeleconsultationSmsNotifier.sendTeleconsultationSms(appointment, appointmentArgumentsMapper);
+            return;
+        }
         if (!shouldSendReschedulingSms(appointment)) {
             return;
         }
@@ -144,6 +166,25 @@ public class AppointmentSMSEventListener {
             Context.getUserContext().addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
             return Boolean.parseBoolean(
                     administrationService.getGlobalProperty("sms.enableAppointmentReschedulingSMSAlert", "false"));
+        } finally {
+            Context.getUserContext().removeProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+        }
+    }
+
+    private boolean isVirtualAppointment(Appointment appointment) {
+        return appointment.getAppointmentKind() != null && appointment.getAppointmentKind() == AppointmentKind.Virtual;
+    }
+
+    private boolean shouldSendTeleconsultationSms(Appointment appointment) {
+        if (Boolean.FALSE.equals(appointment.getSendSms())) {
+            log.info("Skipping teleconsultation SMS: sendSms=false on appointment request.");
+           return false;
+        }
+        AdministrationService administrationService = Context.getService(AdministrationService.class);
+        try {
+            Context.getUserContext().addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+            return Boolean.parseBoolean(
+                    administrationService.getGlobalProperty("sms.enableTeleconsultationSMSAlert", "false"));
         } finally {
             Context.getUserContext().removeProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
         }

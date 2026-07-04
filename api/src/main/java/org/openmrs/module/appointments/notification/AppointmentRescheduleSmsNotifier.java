@@ -6,6 +6,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Patient;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.appointments.constants.SmsGlobalPropertyConstants;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.service.AppointmentArgumentsMapper;
 import org.openmrs.module.sms.api.service.OutgoingSms;
@@ -20,9 +21,6 @@ import java.util.stream.Collectors;
 
 @Component
 public class AppointmentRescheduleSmsNotifier {
-
-    private static final String APPOINTMENT_RESCHEDULE_SMS_CONFIG = "AppointmentReschedule";
-    private static final String APPOINTMENT_UPDATE_SMS_CONFIG = "AppointmentUpdate";
     private static final String APPOINTMENT_RESCHEDULE_SMS_MESSAGE = "reschedule";
 
     private final Log log = LogFactory.getLog(this.getClass());
@@ -43,14 +41,12 @@ public class AppointmentRescheduleSmsNotifier {
 
     private OutgoingSms buildOutgoingSms(String phoneNumber, Appointment previousAppointment,
             Appointment rescheduledAppointment, AppointmentArgumentsMapper appointmentArgumentsMapper) {
-        Map<String, Object> customParams = new HashMap<>();
-        customParams.put("var1", getProviderNames(
-                appointmentArgumentsMapper.getProvidersNameInString(rescheduledAppointment)));
-        customParams.put("var2", getLocationName(rescheduledAppointment, appointmentArgumentsMapper));
-        // customParams.put("var3", getAppointmentDate(previousAppointment, appointmentArgumentsMapper));
-        // customParams.put("var4", getAppointmentDate(rescheduledAppointment, appointmentArgumentsMapper));
+        Map<String, Object> customParams = buildCustomParams(rescheduledAppointment, appointmentArgumentsMapper);
+        String smsConfig = Context.getAdministrationService().getGlobalProperty(
+            SmsGlobalPropertyConstants.RESCHEDULE_TEMPLATE_CONFIG,
+            SmsGlobalPropertyConstants.DEFAULT_RESCHEDULE_TEMPLATE_CONFIG);
 
-        return new OutgoingSms(APPOINTMENT_RESCHEDULE_SMS_CONFIG, phoneNumber, APPOINTMENT_RESCHEDULE_SMS_MESSAGE,
+        return new OutgoingSms(smsConfig, phoneNumber, APPOINTMENT_RESCHEDULE_SMS_MESSAGE,
                 customParams);
     }
 
@@ -68,17 +64,12 @@ public class AppointmentRescheduleSmsNotifier {
 
     private OutgoingSms buildOutgoingSmsForUpdate(String phoneNumber, Appointment updatedAppointment,
             AppointmentArgumentsMapper appointmentArgumentsMapper) {
-        Map<String, Object> customParams = new HashMap<>();
+        Map<String, Object> customParams = buildCustomParams(updatedAppointment, appointmentArgumentsMapper);
+        String smsConfig = Context.getAdministrationService().getGlobalProperty(
+            SmsGlobalPropertyConstants.UPDATE_TEMPLATE_CONFIG,
+            SmsGlobalPropertyConstants.DEFAULT_UPDATE_TEMPLATE_CONFIG);
 
-        String providerNames = getProviderNames(
-                appointmentArgumentsMapper.getProvidersNameInString(updatedAppointment));
-        customParams.put("var1", formatConsultationWithProvider(providerNames));
-
-        String locationName = getLocationName(updatedAppointment, appointmentArgumentsMapper);
-        String timing = getAppointmentTime12Hour(updatedAppointment);
-        customParams.put("var2", formatLocationAtTiming(locationName, timing));
-
-        return new OutgoingSms(APPOINTMENT_UPDATE_SMS_CONFIG, phoneNumber, APPOINTMENT_RESCHEDULE_SMS_MESSAGE,
+        return new OutgoingSms(smsConfig, phoneNumber, APPOINTMENT_RESCHEDULE_SMS_MESSAGE,
                 customParams);
     }
 
@@ -88,19 +79,21 @@ public class AppointmentRescheduleSmsNotifier {
         if (providerNames == null || providerNames.isEmpty()) {
             return "";
         }
-        return providerNames.stream().filter(StringUtils::isNotBlank).collect(Collectors.joining(", "));
+        return providerNames.stream()
+                .filter(StringUtils::isNotBlank)
+                .map(this::formatProviderNameWithPrefix)
+                .collect(Collectors.joining(", "));
     }
-
-    private String getLocationName(Appointment appointment, AppointmentArgumentsMapper appointmentArgumentsMapper) {
-        Map<String, String> arguments = appointmentArgumentsMapper.createArgumentsMapForAppointmentBooking(appointment);
-        String facilityName = arguments.get("facilityname");
-        return facilityName != null ? facilityName : "";
-    }
-
-    private String getAppointmentDate(Appointment appointment, AppointmentArgumentsMapper appointmentArgumentsMapper) {
-        Map<String, String> arguments = appointmentArgumentsMapper.createArgumentsMapForAppointmentBooking(appointment);
-        String date = arguments.get("date");
-        return date != null ? date : "";
+    
+    private String formatProviderNameWithPrefix(String name) {
+        String trimmed = name.trim();
+        if (StringUtils.isBlank(trimmed)) {
+            return "";
+        }
+        if (trimmed.matches("(?i)^(dr\\.?|doctor)\\s+.*")) {
+            return trimmed;
+        }
+        return "Dr. " + trimmed;
     }
 
     private String getPhoneNumber(Appointment appointment) {
@@ -129,24 +122,6 @@ public class AppointmentRescheduleSmsNotifier {
         }
     }
 
-    // ---------------------------- DATETIME UTILS -------------------------------
-    private String formatConsultationWithProvider(String providerNames) {
-        if (StringUtils.isBlank(providerNames)) {
-            return "consultation";
-        }
-        return "consultation with " + providerNames;
-    }
-
-    private String formatLocationAtTiming(String locationName, String timing) {
-        if (StringUtils.isBlank(locationName)) {
-            return StringUtils.isNotBlank(timing) ? timing : "";
-        }
-        if (StringUtils.isBlank(timing)) {
-            return locationName;
-        }
-        return locationName + " at " + timing;
-    }
-
     private String getAppointmentTime12Hour(Appointment appointment) {
         if (appointment.getStartDateTime() == null) {
             return "";
@@ -154,5 +129,23 @@ public class AppointmentRescheduleSmsNotifier {
         String timeZone = Context.getAdministrationService().getGlobalProperty("sms.timezone", "IST");
         String formatted = convertUTCToGivenFormat(appointment.getStartDateTime(), "hh:mm a", timeZone);
         return formatted != null ? formatted : "";
+    }
+
+    // ---------------------------- PAYLOAD PREPARATION -------------------------------
+    private Map<String, Object> buildCustomParams(Appointment appointment, AppointmentArgumentsMapper appointmentArgumentsMapper) {
+        Map<String, Object> customParams = new HashMap<>();
+        Map<String, String> arguments = appointmentArgumentsMapper.createArgumentsMapForAppointmentBooking(appointment);
+
+        String patientName = arguments.get("patientname") != null ? arguments.get("patientname") : "";
+        String providerNames = getProviderNames(appointmentArgumentsMapper.getProvidersNameInString(appointment));
+        String appointmentDate = arguments.get("date") != null ? arguments.get("date") : "";
+        String appointmentTime = getAppointmentTime12Hour(appointment);
+        String locationName = arguments.get("facilityname") != null ? arguments.get("facilityname") : "";
+        customParams.put("var1", patientName);
+        customParams.put("var2", providerNames);
+        customParams.put("var3", appointmentDate);
+        customParams.put("var4", appointmentTime);
+        customParams.put("var5", locationName);
+        return customParams;
     }
 }
