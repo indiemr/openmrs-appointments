@@ -30,6 +30,7 @@ public class AppointmentServiceDescription {
     private Integer cancellationCutoffMinutes;
     private Boolean allowPatientBooking;
     private String serviceMode;
+    private String billableServiceUuid;
 
     public String getServiceMode() { 
         return serviceMode; 
@@ -198,5 +199,13 @@ public class AppointmentServiceDescription {
     
     public void setAllowPatientBooking(Boolean allowPatientBooking) {
         this.allowPatientBooking = allowPatientBooking;
+    }
+
+    public String getBillableServiceUuid() {
+        return billableServiceUuid;
+    }
+
+    public void setBillableServiceUuid(String billableServiceUuid) {
+        this.billableServiceUuid = billableServiceUuid;
     }
 }

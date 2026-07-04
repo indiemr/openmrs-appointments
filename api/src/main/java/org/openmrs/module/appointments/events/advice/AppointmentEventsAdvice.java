@@ -23,34 +23,57 @@ import static org.openmrs.module.appointments.events.AppointmentEventType.BAHMNI
 public class AppointmentEventsAdvice implements AfterReturningAdvice, MethodBeforeAdvice {
 
 	private final Logger log = LogManager.getLogger(AppointmentEventsAdvice.class);
+
+
+    private static final String VALIDATE_AND_SAVE_METHOD = "validateAndSave";
+    private static final String CHANGE_STATUS_METHOD = "changeStatus";
+
 	private final AppointmentEventPublisher eventPublisher;
 	private final ThreadLocal<Map<String,Integer>> threadLocal = new ThreadLocal<>();
 	private final String APPOINTMENT_ID_KEY = "appointmentId";
-	private final Set<String> adviceMethodNames = Sets.newHashSet("validateAndSave");
+	private final Set<String> adviceMethodNames = Sets.newHashSet(VALIDATE_AND_SAVE_METHOD, CHANGE_STATUS_METHOD);
 
 	public AppointmentEventsAdvice() {
 		this.eventPublisher=Context.getRegisteredComponent("appointmentEventPublisher",AppointmentEventPublisher.class);
 	}
 
 	@Override
-	public void afterReturning(Object returnValue, Method method, Object[] arguments, Object target) {
-		if (adviceMethodNames.contains(method.getName())) {
-			Map<String, Integer> patientInfo = threadLocal.get();
-			if (patientInfo != null) {
-				AppointmentEventType eventType = patientInfo.get(APPOINTMENT_ID_KEY) == null ? BAHMNI_APPOINTMENT_CREATED : BAHMNI_APPOINTMENT_UPDATED;
-				threadLocal.remove();
+    public void afterReturning(Object returnValue, Method method, Object[] arguments, Object target) {
+        if (!adviceMethodNames.contains(method.getName())) {
+            return;
+        }
+        if (CHANGE_STATUS_METHOD.equals(method.getName())) {
+            publishStatusChangeEvent(arguments);
+            return;
+        }
+        Map<String, Integer> patientInfo = threadLocal.get();
+        if (patientInfo != null) {
+            AppointmentEventType eventType = patientInfo.get(APPOINTMENT_ID_KEY) == null
+                    ? BAHMNI_APPOINTMENT_CREATED
+                    : BAHMNI_APPOINTMENT_UPDATED;
+            threadLocal.remove();
+            if (RescheduleEventContext.isRescheduleInProgress() && eventType == BAHMNI_APPOINTMENT_CREATED) {
+                return;
+            }
+            Appointment appointment = (Appointment) returnValue;
+            publishBookingEvent(eventType, appointment);
+        }
+    }
 
-				if (RescheduleEventContext.isRescheduleInProgress() && eventType == BAHMNI_APPOINTMENT_CREATED) {
-					return;
-				}
+    private void publishStatusChangeEvent(Object[] arguments) {
+        if (arguments == null || arguments.length == 0 || !(arguments[0] instanceof Appointment)) {
+            return;
+        }
+        Appointment appointment = (Appointment) arguments[0];
+        publishBookingEvent(BAHMNI_APPOINTMENT_UPDATED, appointment);
+    }
 
-				Appointment appointment = (Appointment) returnValue;
-				AppointmentBookingEvent appointmentEvent =new AppointmentBookingEvent(eventType,appointment);
-				eventPublisher.publishEvent(appointmentEvent);
-				log.info("Successfully published event with uuid : " + appointmentEvent.payloadId);
-			}
-		}
-	}
+    private void publishBookingEvent(AppointmentEventType eventType, Appointment appointment) {
+        AppointmentBookingEvent appointmentEvent = new AppointmentBookingEvent(eventType, appointment);
+        eventPublisher.publishEvent(appointmentEvent);
+        log.info("Successfully published event with uuid : " + appointmentEvent.payloadId);
+    }
+
 	@Override
 	public void before(Method method, Object[] objects, @Nullable Object o) {
 		if (adviceMethodNames.contains(method.getName())) {

@@ -93,8 +93,23 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
         Date slotStart = appointment.getStartDateTime();
         Date slotEnd = AppointmentServiceCapacityUtil.resolveAppointmentEndDateTime(appointment);
         Provider provider = service.getProvider();
-        int booked = countBookedAppointments(service, provider, slotStart, slotEnd, appointment.getUuid());
+
+        String excludeAppointmentUuid = resolveExcludeAppointmentUuid(appointment, slotStart, slotEnd);
+        int booked = countBookedAppointments(service, provider, slotStart, slotEnd, excludeAppointmentUuid);
         return booked >= capacity;
+    }
+
+    private String resolveExcludeAppointmentUuid(Appointment appointment, Date slotStart, Date slotEnd) {
+        if (appointment.getUuid() == null) {
+            return null;
+        }
+        Appointment saved = appointmentDao.getAppointmentByUuid(appointment.getUuid());
+        if (saved == null || saved.getStartDateTime() == null || saved.getEndDateTime() == null) {
+            return null;
+        }
+        boolean alreadyInTargetSlot = saved.getStartDateTime().before(slotEnd)
+                && saved.getEndDateTime().after(slotStart);
+        return alreadyInTargetSlot ? appointment.getUuid() : null;
     }
 
     @Override
@@ -167,7 +182,7 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
     }
 
     private int countBookedAppointments(AppointmentServiceDefinition service, Provider provider, Date slotStart, Date slotEnd, String excludeAppointmentUuid) {
-        List<AppointmentStatus> statuses = AppointmentServiceCapacityUtil.OCCUPYING_STATUSES;
+        List<AppointmentStatus> statuses = AppointmentServiceCapacityUtil.SLOT_BLOCKING_STATUSES;
         if (provider != null) {
             return appointmentDao.countOverlappingAppointmentsForProvider(provider, slotStart, slotEnd, excludeAppointmentUuid, statuses);
         }

@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.openmrs.api.context.Context;
@@ -25,12 +26,17 @@ public final class AppointmentServiceCapacityUtil {
     // fallback if GP missing/invalid
     public static final int DEFAULT_MINUTES_PER_APPOINTMENT = 5;
     public static final int DEFAULT_DURATION_MINUTES = 15;
-    public static final List<AppointmentStatus> OCCUPYING_STATUSES = Collections.unmodifiableList(Arrays.asList(
-        AppointmentStatus.Scheduled,
-        AppointmentStatus.CheckedIn,
-        AppointmentStatus.Requested,
-        AppointmentStatus.Arrived
-    ));
+    // public static final List<AppointmentStatus> OCCUPYING_STATUSES = Collections.unmodifiableList(Arrays.asList(
+    //     AppointmentStatus.Scheduled,
+    //     AppointmentStatus.CheckedIn,
+    //     AppointmentStatus.Requested,
+    //     AppointmentStatus.Arrived
+    // ));
+    public static final List<AppointmentStatus> SLOT_BLOCKING_STATUSES = Collections.unmodifiableList(
+                                            EnumSet.allOf(AppointmentStatus.class).stream()
+                                            .filter(status -> status != AppointmentStatus.Cancelled)
+                                            .collect(Collectors.toList())
+                                        );
 
     private AppointmentServiceCapacityUtil() {}
 

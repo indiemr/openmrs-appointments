@@ -38,6 +38,7 @@ public class AppointmentServiceDefinition extends BaseOpenmrsData implements Ser
     private Integer cancellationCutoffMinutes;
     private Boolean allowPatientBooking;
     private AppointmentServiceMode serviceMode;
+    private String billableServiceUuid;
 
     public Location getLocation() {
         return location;
@@ -157,6 +158,14 @@ public class AppointmentServiceDefinition extends BaseOpenmrsData implements Ser
     
     public void setServiceMode(AppointmentServiceMode serviceMode) {
         this.serviceMode = serviceMode;
+    }
+
+    public String getBillableServiceUuid() {
+        return billableServiceUuid;
+    }
+
+    public void setBillableServiceUuid(String billableServiceUuid) {
+        this.billableServiceUuid = billableServiceUuid;
     }
 
     @Override
