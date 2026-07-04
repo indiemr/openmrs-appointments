@@ -39,12 +39,12 @@ public class AppointmentCalendarEventListener {
         }
 
         Appointment appointment = event.getAppointment();
-        if (AppointmentStatus.Cancelled.equals(appointment.getStatus())) {
-            return;
-        }
-
         try {
-            appointmentCalendarService.updateCalendarEventForAppointment(appointment);
+            if (AppointmentStatus.Cancelled.equals(appointment.getStatus())) {
+                appointmentCalendarService.cancelCalendarEventForAppointment(appointment);
+            } else {
+                appointmentCalendarService.updateCalendarEventForAppointment(appointment);
+            }
         } catch (Exception e) {
             log.error("Failed to sync calendar event on appointment update " + appointment.getUuid(), e);
         }

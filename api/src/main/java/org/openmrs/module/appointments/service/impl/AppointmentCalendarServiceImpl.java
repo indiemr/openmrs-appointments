@@ -19,6 +19,7 @@ import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.service.AppointmentCalendarService;
 import org.openmrs.module.appointments.util.AppointmentServiceCapacityUtil;
 import org.openmrs.module.indiemroauthprovider.api.TeleconsultService;
+import org.openmrs.module.indiemroauthprovider.dto.CancelCalendarEventRequest;
 import org.openmrs.module.indiemroauthprovider.dto.CreateCalendarEventRequest;
 import org.openmrs.module.indiemroauthprovider.dto.CreateCalendarEventResponse;
 import org.openmrs.module.indiemroauthprovider.dto.UpdateCalendarEventRequest;
@@ -101,6 +102,33 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
         }
     }
 
+    @Override
+    public void cancelCalendarEventForAppointment(Appointment appointment) {
+        if (!shouldSyncToCalendar(appointment)) {
+            return;
+        }
+
+        Provider provider = resolveProvider(appointment);
+        if (provider == null) {
+            log.warn("Skipping calendar cancel for appointment " + appointment.getUuid() + ": no provider resolved");
+            return;
+        }
+
+        TeleconsultService teleconsultService = getTeleconsultService();
+        if (teleconsultService == null) {
+            log.warn("Skipping calendar cancel for appointment " + appointment.getUuid() + ": TeleconsultService not available");
+            return;
+        }
+
+        try {
+            CancelCalendarEventRequest request = buildCancelCalendarEventRequest(appointment);
+            teleconsultService.cancelCalendarEvent(provider, request);
+            log.info("Cancelled calendar event for appointment " + appointment.getUuid());
+        } catch (Exception e) {
+            log.error("Failed to cancel calendar event for appointment " + appointment.getUuid(), e);
+        }
+    }
+
     private boolean shouldSyncToCalendar(Appointment appointment) {
         if (!isOAuthProviderModuleStarted() || getTeleconsultService() == null) {
             return false;
@@ -110,6 +138,14 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
         }
         AppointmentKind kind = appointment.getAppointmentKind();
         return AppointmentKind.Virtual.equals(kind) || AppointmentKind.Scheduled.equals(kind);
+    }
+
+    private CancelCalendarEventRequest buildCancelCalendarEventRequest(Appointment appointment) {
+        CancelCalendarEventRequest request = new CancelCalendarEventRequest();
+        request.setOauthProviderCode(OAUTH_PROVIDER_CODE);
+        request.setResourceType(RESOURCE_TYPE);
+        request.setResourceUuid(appointment.getUuid());
+        return request;
     }
 
     private CreateCalendarEventRequest buildCreateRequest(Appointment appointment) {
@@ -122,7 +158,7 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
         request.setEnd(AppointmentServiceCapacityUtil.resolveAppointmentEndDateTime(appointment));
         request.setTimeZone(resolveTimeZone());
         request.setCreateMeet(isVirtual(appointment));
-        request.setMintJoinLink(false);
+        request.setMintJoinLink(isVirtual(appointment));
         return request;
     }
 

@@ -7,4 +7,6 @@ public interface AppointmentCalendarService {
     void createCalendarEventForAppointment(Appointment appointment);
 
     void updateCalendarEventForAppointment(Appointment appointment);
+
+    void cancelCalendarEventForAppointment(Appointment appointment);
 }
