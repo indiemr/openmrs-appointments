@@ -104,22 +104,6 @@ public class AppointmentBookingSmsNotifier {
     }
 
     // ---------------------------------------- DATE UTILS ----------------------------------------
-    private String formatConsultationWithProvider(String providerNames) {
-        if (StringUtils.isBlank(providerNames)) {
-            return "consultation";
-        }
-        return "consultation with " + providerNames;
-    }
-
-    private String formatLocationAtTiming(String locationName, String timing) {
-        if (StringUtils.isBlank(locationName)) {
-            return StringUtils.isNotBlank(timing) ? timing : "";
-        }
-        if (StringUtils.isBlank(timing)) {
-            return locationName;
-        }
-        return locationName + " at " + timing;
-    }
 
     private String getAppointmentTime12Hour(Appointment appointment) {
         if (appointment.getStartDateTime() == null) {

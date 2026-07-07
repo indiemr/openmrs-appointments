@@ -175,11 +175,52 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
     }
 
     private String buildEventTitle(Appointment appointment) {
-        String patientName = resolvePatientName(appointment);
-        if (isVirtual(appointment)) {
-            return "Teleconsultation - " + patientName;
+        String prefix = isVirtual(appointment) ? "Teleconsultation" : "Appointment";
+        return prefix + " - " + buildPatientDetails(appointment);
+    }
+    
+    private String buildPatientDetails(Appointment appointment) {
+        StringBuilder details = new StringBuilder(resolvePatientName(appointment));
+    
+        String patientId = resolvePatientIdentifier(appointment);
+        if (StringUtils.isNotBlank(patientId)) {
+            details.append(" (").append(patientId).append(")");
         }
-        return "Appointment - " + patientName;
+    
+        String phone = resolvePatientPhoneNumber(appointment);
+        if (StringUtils.isNotBlank(phone)) {
+            details.append(" - ").append(phone);
+        }
+    
+        String locationName = resolveLocationName(appointment);
+        if (StringUtils.isNotBlank(locationName)) {
+            details.append(" - at ").append(locationName);
+        }
+    
+        return details.toString();
+    }
+    
+    private String resolvePatientIdentifier(Appointment appointment) {
+        Patient patient = appointment.getPatient();
+        if (patient == null || patient.getPatientIdentifier() == null) {
+            return null;
+        }
+        return patient.getPatientIdentifier().getIdentifier();
+    }
+    
+    private String resolvePatientPhoneNumber(Appointment appointment) {
+        Patient patient = appointment.getPatient();
+        if (patient == null || patient.getAttribute("phoneNumber") == null) {
+            return null;
+        }
+        return patient.getAttribute("phoneNumber").getValue();
+    }
+    
+    private String resolveLocationName(Appointment appointment) {
+        if (appointment.getLocation() == null) {
+            return null;
+        }
+        return appointment.getLocation().getName();
     }
 
     private String resolvePatientName(Appointment appointment) {
