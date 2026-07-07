@@ -13,6 +13,7 @@ import java.util.List;
 
 public final class AppointmentReminderLocationUtil {
 
+    // TODO: for future use case. change UUID
     public static final String LOCATION_ATTR_REMINDER_SMS_ENABLED_UUID = "3565d95d-612f-49b2-9ae6-f75efdf4a46c";
     private static final Log log = LogFactory.getLog(AppointmentReminderLocationUtil.class);
 

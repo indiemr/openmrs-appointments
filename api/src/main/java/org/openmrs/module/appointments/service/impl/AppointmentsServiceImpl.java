@@ -225,8 +225,6 @@ public class AppointmentsServiceImpl implements AppointmentsService {
         List<Appointment> appointments = appointmentDao.getAllAppointmentsReminder(hours);
         return appointments.stream()
                 .filter(appointment -> !isServiceOrServiceTypeVoided(appointment))
-                .filter(appointment -> AppointmentReminderLocationUtil
-                        .isReminderSmsEnabledForLocation(appointment.getLocation()))
                 .collect(Collectors.toList());
     }
 
