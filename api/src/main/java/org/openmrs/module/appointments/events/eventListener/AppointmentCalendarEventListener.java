@@ -34,8 +34,14 @@ public class AppointmentCalendarEventListener {
         if (event.eventType != AppointmentEventType.BAHMNI_APPOINTMENT_CREATED) {
             return;
         }
-        executor.execute(() -> runWithContext(event, () ->
-        appointmentCalendarService.createCalendarEventForAppointment(event.getAppointment())));
+
+        try {
+            appointmentCalendarService.createCalendarEventForAppointment(event.getAppointment());
+        } catch (Exception e) {
+            log.error("Failed to create calendar for " + event.getAppointment().getUuid(), e);
+        }
+        // executor.execute(() -> runWithContext(event, () ->
+        // appointmentCalendarService.createCalendarEventForAppointment(event.getAppointment())));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -43,14 +49,25 @@ public class AppointmentCalendarEventListener {
         if (event.eventType != AppointmentEventType.BAHMNI_APPOINTMENT_UPDATED) {
             return;
         }
-        executor.execute(() -> runWithContext(event, () -> {
+        try {
             Appointment appointment = event.getAppointment();
             if (AppointmentStatus.Cancelled.equals(appointment.getStatus())) {
                 appointmentCalendarService.cancelCalendarEventForAppointment(appointment);
             } else {
                 appointmentCalendarService.updateCalendarEventForAppointment(appointment);
-            }
-        }));
+            }    
+        } catch (Exception e) {
+            log.error("Failed to update calendar for " + event.getAppointment().getUuid(), e);
+        }
+        
+        // executor.execute(() -> runWithContext(event, () -> {
+        //     Appointment appointment = event.getAppointment();
+        //     if (AppointmentStatus.Cancelled.equals(appointment.getStatus())) {
+        //         appointmentCalendarService.cancelCalendarEventForAppointment(appointment);
+        //     } else {
+        //         appointmentCalendarService.updateCalendarEventForAppointment(appointment);
+        //     }
+        // }));
     }
 
     private void runWithContext(AppointmentBookingEvent event, Runnable action) {
