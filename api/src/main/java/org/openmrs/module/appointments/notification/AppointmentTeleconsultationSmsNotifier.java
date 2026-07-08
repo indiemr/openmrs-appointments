@@ -52,11 +52,15 @@ public class AppointmentTeleconsultationSmsNotifier {
         String appointmentDate = nullToEmpty(arguments.get("date"));
         String appointmentTime = getAppointmentTime12Hour(appointment);
         String teleLink = getTeleconsultationLink(appointment, arguments);
+        String modifiedTeleLink = teleLink.replace(
+            "https://meet.google.com",
+            "meet.indiemr.in"
+        );
         customParams.put("var1", patientName);
         customParams.put("var2", providerNames);
         customParams.put("var3", appointmentDate);
         customParams.put("var4", appointmentTime);
-        customParams.put("var5", teleLink);
+        customParams.put("var5", modifiedTeleLink);
 
         return customParams;
     }
