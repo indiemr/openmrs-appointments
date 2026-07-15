@@ -17,10 +17,14 @@ import org.openmrs.module.appointments.service.AppointmentArgumentsMapper;
 import org.openmrs.util.PrivilegeConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
+@Order(3)
 public class AppointmentSMSEventListener {
 
     private final Log log = LogFactory.getLog(this.getClass());
@@ -37,12 +41,11 @@ public class AppointmentSMSEventListener {
     @Autowired
     private AppointmentTeleconsultationSmsNotifier appointmentTeleconsultationSmsNotifier;
 
-    @Async("AppointmentsAsyncThreadExecutor")
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onApplicationEvent(AppointmentBookingEvent event) {
         try {
-            Context.openSession();
-            Context.setUserContext(event.userContext);
+            // Context.openSession();
+            // Context.setUserContext(event.userContext);
             if (event.eventType == AppointmentEventType.BAHMNI_APPOINTMENT_CREATED) {
                 handleAppointmentCreatedEvent(event.getAppointment());
             } else if (event.eventType == AppointmentEventType.BAHMNI_APPOINTMENT_UPDATED) {
@@ -51,16 +54,15 @@ public class AppointmentSMSEventListener {
         } catch (Exception e) {
             log.error("Exception occurred during event processing", e);
         } finally {
-            Context.closeSession();
+            // Context.closeSession();
         }
     }
 
-    @Async("AppointmentsAsyncThreadExecutor")
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onApplicationEvent(RecurringAppointmentEvent event) {
         try {
-            Context.openSession();
-            Context.setUserContext(event.userContext);
+            // Context.openSession();
+            // Context.setUserContext(event.userContext);
             if (event.eventType == AppointmentEventType.BAHMNI_RECURRING_APPOINTMENT_CREATED) {
                 handleRecurringAppointmentCreatedEvent(
                         event.getAppointmentRecurringPattern().getAppointments().iterator().next());
@@ -68,21 +70,20 @@ public class AppointmentSMSEventListener {
         } catch (Exception e) {
             log.error("Exception occurred during event processing", e);
         } finally {
-            Context.closeSession();
+            // Context.closeSession();
         }
     }
 
-    @Async("AppointmentsAsyncThreadExecutor")
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onApplicationEvent(AppointmentRescheduledEvent event) {
         try {
-            Context.openSession();
-            Context.setUserContext(event.userContext);
+            // Context.openSession();
+            // Context.setUserContext(event.userContext);
             handleAppointmentRescheduledEvent(event.getPreviousAppointment(), event.getRescheduledAppointment());
         } catch (Exception e) {
             log.error("Exception occurred during reschedule SMS event processing", e);
         } finally {
-            Context.closeSession();
+            // Context.closeSession();
         }
     }
 

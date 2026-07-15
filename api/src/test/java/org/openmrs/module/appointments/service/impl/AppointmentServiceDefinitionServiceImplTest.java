@@ -212,7 +212,7 @@ public class AppointmentServiceDefinitionServiceImplTest {
         LinkedHashSet<AppointmentServiceType> serviceTypes = new LinkedHashSet<>();
         serviceTypes.add(appointmentServiceType);
         existingAppointmentServiceDefinition.setServiceTypes(serviceTypes);
-        when(appointmentServiceDao.getNonVoidedAppointmentServiceByName(serviceName)).thenReturn(existingAppointmentServiceDefinition);
+        when(appointmentServiceDao.getNonVoidedAppointmentServiceByName(serviceName, null)).thenReturn(existingAppointmentServiceDefinition);
 
         expectedException.expect(RuntimeException.class);
         expectedException.expectMessage("The service 'serviceName' is already present");
