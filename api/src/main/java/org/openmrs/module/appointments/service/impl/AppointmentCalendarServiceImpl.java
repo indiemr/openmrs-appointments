@@ -3,6 +3,7 @@ package org.openmrs.module.appointments.service.impl;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.Location;
 import org.openmrs.Patient;
 import org.openmrs.PersonName;
 import org.openmrs.Provider;
@@ -217,10 +218,23 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
     }
     
     private String resolveLocationName(Appointment appointment) {
-        if (appointment.getLocation() == null) {
+        Location location = appointment.getLocation();
+        if (location == null) {
             return null;
         }
-        return appointment.getLocation().getName();
+        String name = location.getName();
+        if (StringUtils.isBlank(name)) {
+            return name;
+        }
+    
+        Location parent = location.getParentLocation();
+        if (parent != null && StringUtils.isNotBlank(parent.getName())) {
+            String parentPrefix = parent.getName() + "_";
+            if (StringUtils.startsWithIgnoreCase(name, parentPrefix)) {
+                name = name.substring(parentPrefix.length());
+            }
+        }
+        return name;
     }
 
     private String resolvePatientName(Appointment appointment) {

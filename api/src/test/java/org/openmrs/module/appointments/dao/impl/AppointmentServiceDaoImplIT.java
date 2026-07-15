@@ -100,13 +100,13 @@ public class AppointmentServiceDaoImplIT extends BaseIntegrationTest {
     public void shouldGetNonVoidedAppointmentServiceByNameAndChangeTheStateOfObjectFromPersistedToDetachedUsingEvict() throws Exception {
         String appointmentServiceName = "Consultation";
         String appointmentServiceUuid = "c36006e5-9fbb-4f20-866b-0ece245615a6";
-        AppointmentServiceDefinition appointmentServiceDefinition = appointmentServiceDao.getNonVoidedAppointmentServiceByName(appointmentServiceName);
+        AppointmentServiceDefinition appointmentServiceDefinition = appointmentServiceDao.getNonVoidedAppointmentServiceByName(appointmentServiceName, null);
         assertNotNull(appointmentServiceDefinition);
         assertEquals(appointmentServiceUuid, appointmentServiceDefinition.getUuid());
         assertEquals(appointmentServiceName, appointmentServiceDefinition.getName());
         assertEquals(30, appointmentServiceDefinition.getDurationMins().intValue());
         appointmentServiceDefinition.setDurationMins(60);
-        AppointmentServiceDefinition appointmentServiceDefinition2 = appointmentServiceDao.getNonVoidedAppointmentServiceByName(appointmentServiceName);
+        AppointmentServiceDefinition appointmentServiceDefinition2 = appointmentServiceDao.getNonVoidedAppointmentServiceByName(appointmentServiceName, null);
         assertNotNull(appointmentServiceDefinition2);
         assertEquals(appointmentServiceUuid, appointmentServiceDefinition2.getUuid());
         assertEquals(appointmentServiceName, appointmentServiceDefinition2.getName());
@@ -115,13 +115,13 @@ public class AppointmentServiceDaoImplIT extends BaseIntegrationTest {
 
     @Test
     public void shouldNotGetAppointmentServiceByServiceNameIfTheAppointmentServiceIsVoidedAndNoNonVoidedAppointmentServicePresent() throws Exception {
-        AppointmentServiceDefinition appointmentServiceDefinition = appointmentServiceDao.getNonVoidedAppointmentServiceByName("Treatment");
+        AppointmentServiceDefinition appointmentServiceDefinition = appointmentServiceDao.getNonVoidedAppointmentServiceByName("Treatment", null);
         assertNull(appointmentServiceDefinition);
     }
 
     @Test
     public void shouldGetNonVoidedAppointmentServiceByServiceName() throws Exception {
-        AppointmentServiceDefinition appointmentServiceDefinition = appointmentServiceDao.getNonVoidedAppointmentServiceByName("Consultation");
+        AppointmentServiceDefinition appointmentServiceDefinition = appointmentServiceDao.getNonVoidedAppointmentServiceByName("Consultation", null);
         assertNotNull(appointmentServiceDefinition);
         assertEquals("Consultation", appointmentServiceDefinition.getName());
         assertEquals(false, appointmentServiceDefinition.getVoided());

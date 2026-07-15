@@ -5,6 +5,7 @@ import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Restrictions;
+import org.openmrs.Provider;
 import org.openmrs.module.appointments.dao.AppointmentServiceDao;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.model.AppointmentServiceSearchParams;
@@ -67,11 +68,16 @@ public class AppointmentServiceDaoImpl implements AppointmentServiceDao{
     }
 
     @Override
-    public AppointmentServiceDefinition getNonVoidedAppointmentServiceByName(String serviceName) {
+    public AppointmentServiceDefinition getNonVoidedAppointmentServiceByName(String serviceName, Provider provider) {
         Session currentSession = sessionFactory.getCurrentSession();
         Criteria criteria = currentSession.createCriteria(AppointmentServiceDefinition.class, "appointmentServiceDefinition");
         criteria.add(Restrictions.eq("name", serviceName));
         criteria.add(Restrictions.eq("voided", false));
+        if (provider == null) {
+            criteria.add(Restrictions.isNull("provider"));
+        } else {
+            criteria.add(Restrictions.eq("provider", provider));
+        }
         AppointmentServiceDefinition appointmentServiceDefinition = (AppointmentServiceDefinition) criteria.uniqueResult();
         evictObjectFromSession(currentSession, appointmentServiceDefinition);
         return appointmentServiceDefinition;

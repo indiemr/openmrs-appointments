@@ -37,7 +37,7 @@ public class AppointmentServiceDefinitionServiceImpl implements AppointmentServi
 
     @Override
     public AppointmentServiceDefinition save(AppointmentServiceDefinition appointmentServiceDefinition) {
-        AppointmentServiceDefinition service = appointmentServiceDao.getNonVoidedAppointmentServiceByName(appointmentServiceDefinition.getName());
+        AppointmentServiceDefinition service = appointmentServiceDao.getNonVoidedAppointmentServiceByName(appointmentServiceDefinition.getName(), appointmentServiceDefinition.getProvider());
         if(service != null && !service.getUuid().equals(appointmentServiceDefinition.getUuid())) {
             throw new RuntimeException("The service '" + appointmentServiceDefinition.getName() + "' is already present");
         }
