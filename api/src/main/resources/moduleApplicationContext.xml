@@ -436,12 +436,38 @@
     </bean>
 
     <bean id="appointmentBillingService"
-        class="org.openmrs.module.appointments.service.impl.AppointmentBillingServiceImpl">
-        <property name="appointmentDao" ref="appointmentDao" />
+      class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager">
+            <ref bean="transactionManager"/>
+        </property>
+        <property name="target">
+            <bean class="org.openmrs.module.appointments.service.impl.AppointmentBillingServiceImpl">
+                <property name="appointmentDao" ref="appointmentDao"/>
+            </bean>
+        </property>
+        <property name="preInterceptors">
+            <ref bean="serviceInterceptors"/>
+        </property>
+        <property name="transactionAttributeSource">
+            <ref bean="transactionAttributeSource"/>
+        </property>
     </bean>
 
     <bean id="appointmentCalendarService"
-        class="org.openmrs.module.appointments.service.impl.AppointmentCalendarServiceImpl">
-        <property name="appointmentDao" ref="appointmentDao" />
+        class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager">
+            <ref bean="transactionManager"/>
+        </property>
+        <property name="target">
+            <bean class="org.openmrs.module.appointments.service.impl.AppointmentCalendarServiceImpl">
+                <property name="appointmentDao" ref="appointmentDao"/>
+            </bean>
+        </property>
+        <property name="preInterceptors">
+            <ref bean="serviceInterceptors"/>
+        </property>
+        <property name="transactionAttributeSource">
+            <ref bean="transactionAttributeSource"/>
+        </property>
     </bean>
 </beans>

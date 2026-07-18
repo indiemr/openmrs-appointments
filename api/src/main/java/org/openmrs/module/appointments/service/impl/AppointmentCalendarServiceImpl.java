@@ -43,41 +43,56 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
     }
 
     @Override
-    public void createCalendarEventForAppointment(Appointment appointment) {
+    public String createCalendarEventForAppointment(String appointmentUuid) {
+        Appointment appointment = appointmentDao.getAppointmentByUuid(appointmentUuid);
+        if (appointment == null) {
+            throw new IllegalArgumentException("Appointment not found: " + appointmentUuid);
+        }
         if (!shouldSyncToCalendar(appointment)) {
-            return;
+            return null;
         }
 
         Provider provider = resolveProvider(appointment);
         if (provider == null) {
-            log.warn("Skipping calendar event for appointment " + appointment.getUuid() + ": no provider resolved");
-            return;
+            log.warn("Skipping calendar event for appointment " + appointmentUuid + ": no provider resolved");
+            return null;
         }
 
         TeleconsultService teleconsultService = getTeleconsultService();
         if (teleconsultService == null) {
-            log.warn("Skipping calendar event for appointment " + appointment.getUuid() + ": TeleconsultService not available");
-            return;
+            log.warn("Skipping calendar event for appointment " + appointmentUuid + ": TeleconsultService not available");
+            return null;
         }
 
+        CreateCalendarEventRequest request = buildCreateRequest(appointment);
+        CreateCalendarEventResponse response;
         try {
-            CreateCalendarEventRequest request = buildCreateRequest(appointment);
-            CreateCalendarEventResponse response = teleconsultService.createCalendarEvent(provider, request);
+            response = teleconsultService.createCalendarEvent(provider, request);
 
+            String meetingUrl = null;
             if (isVirtual(appointment) && response != null && StringUtils.isNotBlank(response.getMeetingUrl())) {
-                appointment.setTeleHealthVideoLink(response.getMeetingUrl());
+                meetingUrl = response.getMeetingUrl();
+                appointment.setTeleHealthVideoLink(meetingUrl);
                 appointmentDao.save(appointment);
             }
 
-            log.info("Created calendar event for appointment " + appointment.getUuid()
+            log.info("Created calendar event for appointment " + appointmentUuid
                     + (response != null && response.getHtmlLink() != null ? " at " + response.getHtmlLink() : ""));
+            return meetingUrl;
         } catch (Exception e) {
-            log.error("Failed to create calendar event for appointment " + appointment.getUuid(), e);
+            log.error("Failed to create calendar event for appointment " + appointmentUuid, e);
+            throw new RuntimeException("Failed to create calendar event for appointment " + appointmentUuid, e);
         }
     }
 
     @Override
-    public void updateCalendarEventForAppointment(Appointment appointment) {
+    public void updateCalendarEventForAppointment(String appointmentUuid) {
+
+        Appointment appointment = appointmentDao.getAppointmentByUuid(appointmentUuid);
+        if (appointment == null) {
+            throw new IllegalArgumentException("Appointment not found: " + appointmentUuid);
+        }
+        
         if (!shouldSyncToCalendar(appointment)) {
             return;
         }
@@ -100,11 +115,17 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
             log.info("Updated calendar event for appointment " + appointment.getUuid());
         } catch (Exception e) {
             log.error("Failed to update calendar event for appointment " + appointment.getUuid(), e);
+            throw new RuntimeException("Failed to update calendar event for appointment " + appointmentUuid, e);
         }
     }
 
     @Override
-    public void cancelCalendarEventForAppointment(Appointment appointment) {
+    public void cancelCalendarEventForAppointment(String appointmentUuid) {
+        Appointment appointment = appointmentDao.getAppointmentByUuid(appointmentUuid);
+        if (appointment == null) {
+            throw new IllegalArgumentException("Appointment not found: " + appointmentUuid);
+        }
+
         if (!shouldSyncToCalendar(appointment)) {
             return;
         }
@@ -127,6 +148,7 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
             log.info("Cancelled calendar event for appointment " + appointment.getUuid());
         } catch (Exception e) {
             log.error("Failed to cancel calendar event for appointment " + appointment.getUuid(), e);
+            throw new RuntimeException("Failed to cancel calendar event for appointment " + appointmentUuid, e);
         }
     }
 

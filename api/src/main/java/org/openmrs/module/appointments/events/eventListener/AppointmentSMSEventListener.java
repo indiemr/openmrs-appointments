@@ -24,7 +24,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
-@Order(3)
+@Order(2)
 public class AppointmentSMSEventListener {
 
     private final Log log = LogFactory.getLog(this.getClass());
@@ -41,7 +41,7 @@ public class AppointmentSMSEventListener {
     @Autowired
     private AppointmentTeleconsultationSmsNotifier appointmentTeleconsultationSmsNotifier;
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     public void onApplicationEvent(AppointmentBookingEvent event) {
         try {
             // Context.openSession();
@@ -58,7 +58,7 @@ public class AppointmentSMSEventListener {
         }
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     public void onApplicationEvent(RecurringAppointmentEvent event) {
         try {
             // Context.openSession();
@@ -74,7 +74,7 @@ public class AppointmentSMSEventListener {
         }
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     public void onApplicationEvent(AppointmentRescheduledEvent event) {
         try {
             // Context.openSession();
