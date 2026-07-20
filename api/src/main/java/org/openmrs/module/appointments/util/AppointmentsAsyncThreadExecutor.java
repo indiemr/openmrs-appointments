@@ -22,7 +22,11 @@ public class AppointmentsAsyncThreadExecutor {
 	
 	@Bean(name = "AppointmentsAsyncThreadExecutor")
 	public Executor threadPoolTaskExecutor() {
-		ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
-		return threadPoolTaskExecutor;
+		ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(5);
+        executor.setThreadNamePrefix("appointments-async-");
+        executor.initialize();
+        return executor;
 	}
 }

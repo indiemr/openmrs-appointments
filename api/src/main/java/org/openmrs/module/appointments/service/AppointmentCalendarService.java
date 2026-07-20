@@ -1,12 +1,16 @@
 package org.openmrs.module.appointments.service;
 
-import org.openmrs.module.appointments.model.Appointment;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface AppointmentCalendarService {
 
-    void createCalendarEventForAppointment(Appointment appointment);
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    String createCalendarEventForAppointment(String appointmentUuid);
 
-    void updateCalendarEventForAppointment(Appointment appointment);
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    void updateCalendarEventForAppointment(String appointmentUuid);
 
-    void cancelCalendarEventForAppointment(Appointment appointment);
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    void cancelCalendarEventForAppointment(String appointmentUuid);
 }

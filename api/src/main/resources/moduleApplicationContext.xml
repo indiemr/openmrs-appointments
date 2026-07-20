@@ -156,6 +156,7 @@
                         <ref bean="appointmentLeadTimeValidator"/>
                         <ref bean="appointmentCancellationValidator"/>
                         <ref bean="appointmentSlotCapacityValidator"/>
+                        <ref bean="virtualAppointmentOAuthValidator"/>
                     </list>
                 </property>
                 <property name="editAppointmentValidators">
@@ -165,6 +166,7 @@
                         <ref bean="appointmentLeadTimeValidator"/>
                         <ref bean="appointmentCancellationValidator"/>
                         <ref bean="appointmentSlotCapacityValidator"/>
+                        <ref bean="virtualAppointmentOAuthValidator"/>
                     </list>
                 </property>
                 <property name="appointmentServiceHelper">
@@ -220,6 +222,7 @@
                         <ref bean="appointmentLeadTimeValidator"/>
                         <ref bean="appointmentCancellationValidator"/>
                         <ref bean="appointmentSlotCapacityValidator"/>
+                        <ref bean="virtualAppointmentOAuthValidator"/>
                     </list>
                 </property>
                 <property name="editAppointmentValidators">
@@ -229,6 +232,7 @@
                         <ref bean="appointmentLeadTimeValidator"/>
                         <ref bean="appointmentCancellationValidator"/>
                         <ref bean="appointmentSlotCapacityValidator"/>
+                        <ref bean="virtualAppointmentOAuthValidator"/>
                     </list>
                 </property>
                 <property name="appointmentDao">
@@ -425,6 +429,7 @@
     <bean id="appointmentLeadTimeValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentLeadTimeValidator"/>
     <bean id="appointmentCancellationValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentCancellationValidator"/>
     <bean id="appointmentCancellationStatusChangeValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentCancellationStatusChangeValidator"/>
+    <bean id="virtualAppointmentOAuthValidator" class="org.openmrs.module.appointments.validator.impl.VirtualAppointmentOAuthValidator"/>
 
     <bean parent="serviceContext">
         <property name="moduleService">
@@ -436,12 +441,38 @@
     </bean>
 
     <bean id="appointmentBillingService"
-        class="org.openmrs.module.appointments.service.impl.AppointmentBillingServiceImpl">
-        <property name="appointmentDao" ref="appointmentDao" />
+      class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager">
+            <ref bean="transactionManager"/>
+        </property>
+        <property name="target">
+            <bean class="org.openmrs.module.appointments.service.impl.AppointmentBillingServiceImpl">
+                <property name="appointmentDao" ref="appointmentDao"/>
+            </bean>
+        </property>
+        <property name="preInterceptors">
+            <ref bean="serviceInterceptors"/>
+        </property>
+        <property name="transactionAttributeSource">
+            <ref bean="transactionAttributeSource"/>
+        </property>
     </bean>
 
     <bean id="appointmentCalendarService"
-        class="org.openmrs.module.appointments.service.impl.AppointmentCalendarServiceImpl">
-        <property name="appointmentDao" ref="appointmentDao" />
+        class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager">
+            <ref bean="transactionManager"/>
+        </property>
+        <property name="target">
+            <bean class="org.openmrs.module.appointments.service.impl.AppointmentCalendarServiceImpl">
+                <property name="appointmentDao" ref="appointmentDao"/>
+            </bean>
+        </property>
+        <property name="preInterceptors">
+            <ref bean="serviceInterceptors"/>
+        </property>
+        <property name="transactionAttributeSource">
+            <ref bean="transactionAttributeSource"/>
+        </property>
     </bean>
 </beans>

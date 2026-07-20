@@ -141,7 +141,7 @@ public class AppointmentsServiceImpl implements AppointmentsService {
     public Appointment validateAndSave(Appointment appointment) throws APIException {
         validate(appointment, appointmentValidators);
         checkAndAssignAppointmentNumber(appointment);
-        setupTeleconsultation(appointment);
+        // setupTeleconsultation(appointment);
         save(appointment);
         notifyUpdates(appointment);
         return appointment;
@@ -153,7 +153,7 @@ public class AppointmentsServiceImpl implements AppointmentsService {
         Appointment appointment = mapper.get();
         validate(appointment, appointmentValidators);
         checkAndAssignAppointmentNumber(appointment);
-        setupTeleconsultation(appointment);
+        // setupTeleconsultation(appointment);
         save(appointment);
         notifyUpdates(appointment);
         return appointment;

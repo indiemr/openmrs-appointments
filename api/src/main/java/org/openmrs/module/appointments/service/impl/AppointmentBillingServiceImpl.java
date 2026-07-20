@@ -41,16 +41,17 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
     }
 
     @Override
-    public String createBillForAppointment(Appointment appointment) {
-        if (!Boolean.TRUE.equals(appointment.getCreateBill())) {
+    public String createBillForAppointment(String appointmentUuid, boolean createBill) {
+        if (!createBill) {
             return null;
+        }
+        Appointment appointment = appointmentDao.getAppointmentByUuid(appointmentUuid);
+        if (appointment == null) {
+            throw new IllegalArgumentException("Appointment not found: " + appointmentUuid);
         }
         if (StringUtils.isNotBlank(appointment.getBillUuid())) {
             return appointment.getBillUuid();
         }
-        // if (!isBillingModuleStarted()) {
-        //     throw new IllegalStateException("Billing module is not started");
-        // }
 
         AppointmentServiceDefinition service = appointment.getService();
         if (service == null || StringUtils.isBlank(service.getBillableServiceUuid())) {
@@ -103,12 +104,17 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
     }
 
     @Override
-    public void voidBillForAppointment(Appointment appointment, String voidReason) {
+    public void voidBillForAppointment(String appointmentUuid, String voidReason) {
+        if (StringUtils.isBlank(appointmentUuid) || StringUtils.isBlank(voidReason)) {
+            return;
+        }
+        Appointment appointment = appointmentDao.getAppointmentByUuid(appointmentUuid);
+
         if (appointment == null || StringUtils.isBlank(voidReason) || StringUtils.isBlank(appointment.getBillUuid())) {
             return;
         }
 
-        try {
+
         IBillService billService = Context.getService(IBillService.class);
         Bill bill = billService.getByUuid(appointment.getBillUuid());
 
@@ -122,11 +128,7 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
             return;
         }
         billService.voidEntity(bill, voidReason);
-        log.info("Voided bill " + bill.getUuid() + " for cancelled appointment " + appointment.getUuid());                
-        
-        } catch (Exception e) {
-            log.error("Failed to void bill for appointment " + appointment.getUuid(), e);
-        }
+        log.info("Voided bill " + bill.getUuid() + " for cancelled appointment " + appointment.getUuid());
     }
 
     private boolean isBillingModuleStarted() {

@@ -1,8 +1,12 @@
 package org.openmrs.module.appointments.service;
-
-import org.openmrs.module.appointments.model.Appointment;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface AppointmentBillingService {
-    String createBillForAppointment(Appointment appointment);
-    void voidBillForAppointment(Appointment appointment, String voidReason);
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    String createBillForAppointment(String appointmentUuid, boolean createBill);
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    void voidBillForAppointment(String appointmentUuid, String voidReason);
 }
