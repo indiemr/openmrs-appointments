@@ -67,8 +67,21 @@ public class AppointmentCreateSideEffectsListener {
         Appointment responseAppointment = event.getAppointment();
         String appointmentUuid = responseAppointment.getUuid();
         boolean cancelled = AppointmentStatus.Cancelled.equals(responseAppointment.getStatus());
+        boolean createBill = Boolean.TRUE.equals(responseAppointment.getCreateBill());
 
-        // 1) Void bill only on cancel (if bill exists)
+        // 1) create bill on updating appointment (Only if bill doesnt exist)
+        if (createBill && !cancelled) {
+            try {
+                String billUuid = appointmentBillingService.createBillForAppointment(appointmentUuid, createBill);
+                if (StringUtils.isNotBlank(billUuid)) {
+                    responseAppointment.setBillUuid(billUuid);
+                }
+            } catch (Exception e) {
+                log.error("Bill creation failed for appointment " + appointmentUuid, e);
+            }
+        }
+
+        // 2) Void bill only on cancel (if bill exists)
         if (cancelled && StringUtils.isNotBlank(responseAppointment.getBillUuid())) {
             try {
                 appointmentBillingService.voidBillForAppointment(appointmentUuid, "Appointment cancelled");
