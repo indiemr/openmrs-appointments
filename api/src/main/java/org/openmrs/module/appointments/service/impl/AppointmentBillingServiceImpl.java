@@ -131,6 +131,50 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
         log.info("Voided bill " + bill.getUuid() + " for cancelled appointment " + appointment.getUuid());
     }
 
+    @Override
+    public String syncBillWithAppointmentService(String appointmentUuid) {
+        Appointment appointment = appointmentDao.getAppointmentByUuid(appointmentUuid);
+        if (appointment == null || StringUtils.isBlank(appointment.getBillUuid())) {
+            return null;
+        }
+        
+        String newBillableServiceUuid = resolveBillableServiceUuid(appointment);
+        if (StringUtils.isBlank(newBillableServiceUuid)) {
+            return appointment.getBillUuid();
+        }
+
+        IBillService billService = Context.getService(IBillService.class);
+        Bill oldBill = billService.getByUuid(appointment.getBillUuid());
+
+        // Bill missing or already voided → create fresh bill for current service
+        if (oldBill == null || Boolean.TRUE.equals(oldBill.getVoided())) {
+            clearBillUuidFromAppointment(appointmentUuid);
+            return createBillForAppointment(appointmentUuid, true);
+        }
+
+        String oldBillableServiceUuid = resolveBilledServiceUuid(oldBill);
+
+        // Same service → nothing to do (slot/time/provider change only)
+        if (StringUtils.equals(newBillableServiceUuid, oldBillableServiceUuid)) {
+            return appointment.getBillUuid();
+        }
+
+        // // Service changed + PAID.
+        // if (BillStatus.PAID.equals(bill.getStatus())) {
+        //     // Paid bill: don't void — create a new pending bill for the new service
+        //     log.warn("Bill " + bill.getUuid() + " is PAID; creating new bill for changed service on appointment "
+        //     + appointmentUuid);
+        //     clearBillUuidFromAppointment(appointmentUuid);
+        //     return createBillForAppointment(appointmentUuid, true);
+        // }
+        
+        // Unpaid bill: void old + create new
+        billService.voidEntity(oldBill, "Appointment service changed");
+        log.info("Voided bill " + oldBill.getUuid() + " due to service change on appointment " + appointmentUuid);
+        clearBillUuidFromAppointment(appointmentUuid);
+        return createBillForAppointment(appointmentUuid, true);
+    }
+
     private boolean isBillingModuleStarted() {
         Module billingModule = ModuleFactory.getModuleById("billing");
         return billingModule != null && billingModule.isStarted();
@@ -184,5 +228,32 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
             }
         }
         return null;
+    }
+
+    private String resolveBillableServiceUuid(Appointment appointment) {
+        if (appointment == null || appointment.getService() == null) {
+            return null;
+        }
+        return appointment.getService().getBillableServiceUuid();
+    }
+
+    private String resolveBilledServiceUuid(Bill bill) {
+        if (bill == null || bill.getLineItems() == null) {
+            return null;
+        }
+        return bill.getLineItems().stream()
+                .map(BillLineItem::getBillableService)
+                .filter(Objects::nonNull)
+                .map(BillableService::getUuid)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private void clearBillUuidFromAppointment(String appointmentUuid) {
+        Appointment appointment = appointmentDao.getAppointmentByUuid(appointmentUuid);
+        if (appointment != null && StringUtils.isNotBlank(appointment.getBillUuid())) {
+            appointment.setBillUuid(null);
+            appointmentDao.save(appointment);
+        }
     }
 }
