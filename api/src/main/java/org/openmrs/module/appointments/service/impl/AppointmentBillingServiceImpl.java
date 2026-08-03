@@ -122,11 +122,13 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
             return;
         }
 
-        // Only auto-void unpaid bills
-        if (BillStatus.PAID.equals(bill.getStatus())) {
+        // Skip void: PAID or POSTED bill
+        if (BillStatus.PAID.equals(bill.getStatus()) || BillStatus.POSTED.equals(bill.getStatus())) {
             log.warn("Bill " + bill.getUuid() + " is PAID; not voiding on appointment cancel");
             return;
         }
+
+        // Only auto-void PENDING bills
         billService.voidEntity(bill, voidReason);
         log.info("Voided bill " + bill.getUuid() + " for cancelled appointment " + appointment.getUuid());
     }
@@ -154,25 +156,72 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
 
         String oldBillableServiceUuid = resolveBilledServiceUuid(oldBill);
 
+        log.info("oldBillableServiceUuid : " + oldBillableServiceUuid);
+        log.info("newBillableServiceUuid : " + newBillableServiceUuid);
+        log.info("is same service " + StringUtils.equals(newBillableServiceUuid, oldBillableServiceUuid));
+        
         // Same service → nothing to do (slot/time/provider change only)
         if (StringUtils.equals(newBillableServiceUuid, oldBillableServiceUuid)) {
+            log.info("Same service, return same bill....");
             return appointment.getBillUuid();
         }
 
-        // // Service changed + PAID.
-        // if (BillStatus.PAID.equals(bill.getStatus())) {
-        //     // Paid bill: don't void — create a new pending bill for the new service
-        //     log.warn("Bill " + bill.getUuid() + " is PAID; creating new bill for changed service on appointment "
-        //     + appointmentUuid);
-        //     clearBillUuidFromAppointment(appointmentUuid);
-        //     return createBillForAppointment(appointmentUuid, true);
-        // }
+        log.info("diff service, updating bill line item in place....");
+
+        return updateBillLineItemForServiceChange(appointment, oldBill, oldBillableServiceUuid);
         
-        // Unpaid bill: void old + create new
-        billService.voidEntity(oldBill, "Appointment service changed");
-        log.info("Voided bill " + oldBill.getUuid() + " due to service change on appointment " + appointmentUuid);
-        clearBillUuidFromAppointment(appointmentUuid);
-        return createBillForAppointment(appointmentUuid, true);
+    }
+
+    private String updateBillLineItemForServiceChange(Appointment appointment, Bill bill, String oldBillableServiceUuid) {
+        AppointmentServiceDefinition service = appointment.getService();
+        IBillableItemsService billableItemsService = Context.getService(IBillableItemsService.class);
+        BillableService newBillableService = billableItemsService.getByUuid(service.getBillableServiceUuid());
+        if (newBillableService == null) {
+            throw new IllegalArgumentException("Billable service not found: " + service.getBillableServiceUuid());
+        }
+        BigDecimal newPrice = resolveDefaultPrice(newBillableService);
+        if (newPrice == null) {
+            throw new IllegalStateException("No price configured for billable service: " + newBillableService.getUuid());
+        }
+        BillLineItem lineItemToUpdate = findAppointmentLineItem(bill, oldBillableServiceUuid);
+        if (lineItemToUpdate == null) {
+            throw new IllegalStateException("No matching line item found on bill " + bill.getUuid());
+        }
+
+        lineItemToUpdate.setBillableService(newBillableService);
+        lineItemToUpdate.setPrice(newPrice);
+        lineItemToUpdate.setQuantity(1);
+
+        bill.synchronizeBillStatus();
+
+        IBillService billService = Context.getService(IBillService.class);
+        Bill savedBill = billService.save(bill);
+        log.info("Updated bill line item on bill " + savedBill.getUuid()
+                + " for appointment " + appointment.getUuid()
+                + " (old service: " + oldBillableServiceUuid
+                + ", new service: " + newBillableService.getUuid() + ")");
+        return savedBill.getUuid();
+    }
+
+    private BillLineItem findAppointmentLineItem(Bill bill, String oldBillableServiceUuid) {
+        List<BillLineItem> lineItems = bill.getLineItems();
+        if (lineItems == null || lineItems.isEmpty()) {
+            return null;
+        }
+
+        // Prefer line item matching the old billed service
+        for (BillLineItem lineItem: lineItems) {
+            if (lineItem.getBillableService() != null
+            && StringUtils.equals(oldBillableServiceUuid, lineItem.getBillableService().getUuid())) {
+                return lineItem;
+            }
+        }
+
+        // Fallback: single line item bill (your current create flow)
+        if (bill.getLineItems().size() == 1) {
+            return bill.getLineItems().get(0);
+        }
+        return null;
     }
 
     private boolean isBillingModuleStarted() {

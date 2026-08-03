@@ -334,6 +334,13 @@
 					<enabled>true</enabled>
 				</snapshots>
 			</repository>
+			<repository>
+				<id>github-indiemr-billing</id>
+				<url>https://maven.pkg.github.com/indiemr/openmrs-module-billing</url>
+				<snapshots>
+				  <enabled>true</enabled>
+				</snapshots>
+			  </repository>
 		</repositories>
 
 	<pluginRepositories>
