@@ -9,4 +9,7 @@ public interface AppointmentBillingService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     void voidBillForAppointment(String appointmentUuid, String voidReason);
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    String syncBillWithAppointmentService(String appointmentUuid);
 }

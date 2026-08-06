@@ -69,27 +69,42 @@ public class AppointmentCreateSideEffectsListener {
         boolean cancelled = AppointmentStatus.Cancelled.equals(responseAppointment.getStatus());
         boolean createBill = Boolean.TRUE.equals(responseAppointment.getCreateBill());
 
-        // 1) create bill on updating appointment (Only if bill doesnt exist)
-        if (createBill && !cancelled) {
-            try {
-                String billUuid = appointmentBillingService.createBillForAppointment(appointmentUuid, createBill);
-                if (StringUtils.isNotBlank(billUuid)) {
-                    responseAppointment.setBillUuid(billUuid);
+        // 1) Cancel -> void bill
+        if (cancelled) {
+            if (StringUtils.isNotBlank(responseAppointment.getBillUuid())) {
+                try {
+                    appointmentBillingService.voidBillForAppointment(appointmentUuid, "Appointment cancelled");
+                } catch (Exception e) {
+                    log.error("Bill void failed for appointment " + appointmentUuid, e);
                 }
-            } catch (Exception e) {
-                log.error("Bill creation failed for appointment " + appointmentUuid, e);
+            }
+        } else {
+            // 2) Create bill if requested and none exists yet
+            if (createBill) {
+                try {
+                    String billUuid = appointmentBillingService.createBillForAppointment(appointmentUuid, true);
+                    if (StringUtils.isNotBlank(billUuid)) {
+                        responseAppointment.setBillUuid(billUuid);
+                    }
+                } catch (Exception e) {
+                    log.error("Bill creation failed for appointment " + appointmentUuid, e);
+                }
+            }
+
+            // 3) Service changed -> void old bill + create new (or keep if same service)
+            if (StringUtils.isNotBlank(responseAppointment.getBillUuid())) {
+                try {
+                    String billUuid = appointmentBillingService.syncBillWithAppointmentService(appointmentUuid);
+                    if (StringUtils.isNotBlank(billUuid)) {
+                        responseAppointment.setBillUuid(billUuid);
+                    }
+                } catch (Exception e) {
+                    log.error("Bill sync failed for appointment " + appointmentUuid, e);
+                }
             }
         }
 
-        // 2) Void bill only on cancel (if bill exists)
-        if (cancelled && StringUtils.isNotBlank(responseAppointment.getBillUuid())) {
-            try {
-                appointmentBillingService.voidBillForAppointment(appointmentUuid, "Appointment cancelled");
-            } catch (Exception e) {
-                log.error("Bill void failed for appointment " + appointmentUuid, e);
-            }
-        }
-
+        // 4) Calendar sync
         try {
             if (cancelled) {
                 appointmentCalendarService.cancelCalendarEventForAppointment(appointmentUuid);
