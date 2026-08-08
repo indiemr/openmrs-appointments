@@ -338,6 +338,40 @@ public class AppointmentDaoImpl implements AppointmentDao {
             Number count = (Number) criteria.uniqueResult();
             return count != null ? count.intValue() : 0;
         }
+
+    @Override
+    public List<Appointment> getOverlappingAppointmentsForPatient(
+        String patientUuid,
+        Date rangeStart,
+        Date rangeEnd,
+        String excludeAppointmentUuid,
+        List<AppointmentStatus> appointmentStatusFilterList
+    ) {
+        Criteria criteria = sessionFactory.getCurrentSession().createCriteria(Appointment.class, "appointment");
+        criteria.add(Restrictions.eq("voided", false));
+        criteria.createAlias("patient", "patient");
+        criteria.add(Restrictions.eq("patient.uuid", patientUuid));
+        criteria.add(Restrictions.eq("patient.voided", false));
+        criteria.add(Restrictions.eq("patient.personVoided", false));
+
+        
+        // appointments overlapping the day range
+        criteria.add(Restrictions.lt("startDateTime", rangeEnd));
+        criteria.add(Restrictions.gt("endDateTime", rangeStart));
+
+        // timed only — date-only should not block timed slots
+        criteria.add(Restrictions.or(
+            Restrictions.eq("dateOnly", false),
+            Restrictions.isNull("dateOnly")
+        ));
+        if (appointmentStatusFilterList != null && !appointmentStatusFilterList.isEmpty()) {
+            criteria.add(Restrictions.in("status", appointmentStatusFilterList));
+        }
+        if (StringUtils.isNotBlank(excludeAppointmentUuid)) {
+            criteria.add(Restrictions.ne("uuid", excludeAppointmentUuid));
+        }
+        return criteria.list();
+    }
     
 
     private void setProviderCriteria(AppointmentSearchRequest appointmentSearchRequest, Criteria criteria) {

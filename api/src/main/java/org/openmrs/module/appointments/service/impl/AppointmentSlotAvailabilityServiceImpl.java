@@ -59,6 +59,7 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
         int durationMins = AppointmentServiceCapacityUtil.resolveDurationMins(service, null);
         DayOfWeek dayOfWeek = AppointmentServiceCapacityUtil.toDayOfWeek(date);
         List<AppointmentUnavailability> unavailabilities = loadUnavailabilitiesForDate(service, provider, date);
+        List<Appointment> patientAppointments = loadPatientAppointmentsForDate(patientUuid, date, excludeAppointmentUuid);
 
         List<AppointmentSlotAvailability> result = new ArrayList<>();
         List<ServiceWeeklyAvailability> weeklyAvailabilities = AppointmentServiceCapacityUtil
@@ -67,11 +68,11 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
             for (ServiceWeeklyAvailability weeklyAvailability : weeklyAvailabilities) {
                 result.addAll(buildSlotsForWindow(service, provider, date, weeklyAvailability.getStartTime(),
                         weeklyAvailability.getEndTime(), durationMins, weeklyAvailability, excludeAppointmentUuid,
-                        unavailabilities, patientUuid));
+                        unavailabilities, patientAppointments));
             }
         } else {
             result.addAll(buildSlotsForWindow(service, provider, date, service.getStartTime(), service.getEndTime(),
-                    durationMins, null, excludeAppointmentUuid, unavailabilities, patientUuid));
+                    durationMins, null, excludeAppointmentUuid, unavailabilities, patientAppointments));
         }
         return result;
     }
@@ -141,6 +142,26 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
                 service.getLocation(), service, provider, dayStart, dayEnd);
     }
 
+    private List<Appointment> loadPatientAppointmentsForDate(
+        String patientUuid,
+        Date date,
+        String excludeAppointmentUuid
+    ) {
+        if (StringUtils.isBlank(patientUuid) || date == null) {
+            return Collections.emptyList();
+        }
+
+        Date dayStart = AppointmentUnavailabilityUtil.startOfDay(date);
+        Date dayEnd = AppointmentUnavailabilityUtil.endOfDay(date);
+        return appointmentDao.getOverlappingAppointmentsForPatient(
+            patientUuid, 
+            dayStart, 
+            dayEnd, 
+            excludeAppointmentUuid, 
+            AppointmentServiceCapacityUtil.SLOT_BLOCKING_STATUSES
+        );
+    }
+
     private List<AppointmentSlotAvailability> buildSlotsForWindow(AppointmentServiceDefinition service,
             Provider provider,
             Date date,
@@ -150,7 +171,8 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
             ServiceWeeklyAvailability weeklyAvailability,
             String excludeAppointmentUuid,
             List<AppointmentUnavailability> unavailabilities,
-            String patientUuid) {
+            List<Appointment> patientAppointments
+        ) {
         List<AppointmentSlotAvailability> slots = new ArrayList<>();
         
         int capacity = AppointmentServiceCapacityUtil.resolveSlotCapacity(service, weeklyAvailability, durationMins);
@@ -176,7 +198,7 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
                 int booked = countBookedAppointments(service, provider, s, e, excludeAppointmentUuid);
                 int available = Math.max(capacity - booked, 0);
 
-                if (available > 0 && StringUtils.isNotBlank(patientUuid) && isPatientBusy(patientUuid, s, e, excludeAppointmentUuid)) {
+                if (available > 0 && isPatientBusy(patientAppointments, s, e)) {
                     available = 0;
                 }
                 slot.setBooked(booked);
@@ -188,10 +210,18 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
         return slots;
     }
 
-    private boolean isPatientBusy(String patientUuid, Date slotStart, Date slotEnd, String excludeAppointmentUuid) {
-        List<AppointmentStatus> statuses = AppointmentServiceCapacityUtil.SLOT_BLOCKING_STATUSES;
-        return appointmentDao.countOverlappingAppointmentsForPatient(
-        patientUuid, slotStart, slotEnd, excludeAppointmentUuid, statuses) > 0;
+    private boolean isPatientBusy(List<Appointment> patientAppointments, Date slotStart, Date slotEnd) {
+        if (patientAppointments == null || patientAppointments.isEmpty()) {
+            return false;
+        }
+        for (Appointment appointment: patientAppointments) {
+            if (appointment.getStartDateTime() != null && appointment.getEndDateTime() != null
+                && appointment.getStartDateTime().before(slotEnd) 
+                && appointment.getEndDateTime().after(slotStart)) {
+                    return true;
+            }
+        }
+        return false;
     }
 
     private int countBookedAppointments(AppointmentServiceDefinition service, Provider provider, Date slotStart, Date slotEnd, String excludeAppointmentUuid) {
