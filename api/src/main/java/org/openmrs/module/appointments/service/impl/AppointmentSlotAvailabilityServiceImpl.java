@@ -1,5 +1,6 @@
 package org.openmrs.module.appointments.service.impl;
 
+import org.apache.commons.lang.StringUtils;
 import org.openmrs.Provider;
 import org.openmrs.module.appointments.dao.AppointmentDao;
 import org.openmrs.module.appointments.dao.AppointmentServiceDao;
@@ -41,7 +42,7 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
 
     @Override
     public List<AppointmentSlotAvailability> getAvailableSlots(String serviceUuid, Date date,
-            String excludeAppointmentUuid) {
+            String excludeAppointmentUuid, String patientUuid) {
         AppointmentServiceDefinition service = appointmentServiceDao.getAppointmentServiceByUuid(serviceUuid);
         if (service == null) {
             throw new IllegalArgumentException("Appointment Service does not exist");
@@ -66,11 +67,11 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
             for (ServiceWeeklyAvailability weeklyAvailability : weeklyAvailabilities) {
                 result.addAll(buildSlotsForWindow(service, provider, date, weeklyAvailability.getStartTime(),
                         weeklyAvailability.getEndTime(), durationMins, weeklyAvailability, excludeAppointmentUuid,
-                        unavailabilities));
+                        unavailabilities, patientUuid));
             }
         } else {
             result.addAll(buildSlotsForWindow(service, provider, date, service.getStartTime(), service.getEndTime(),
-                    durationMins, null, excludeAppointmentUuid, unavailabilities));
+                    durationMins, null, excludeAppointmentUuid, unavailabilities, patientUuid));
         }
         return result;
     }
@@ -148,7 +149,8 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
             int durationMins,
             ServiceWeeklyAvailability weeklyAvailability,
             String excludeAppointmentUuid,
-            List<AppointmentUnavailability> unavailabilities) {
+            List<AppointmentUnavailability> unavailabilities,
+            String patientUuid) {
         List<AppointmentSlotAvailability> slots = new ArrayList<>();
         
         int capacity = AppointmentServiceCapacityUtil.resolveSlotCapacity(service, weeklyAvailability, durationMins);
@@ -172,13 +174,24 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
                 slot.setAvailable(0);
             } else {
                 int booked = countBookedAppointments(service, provider, s, e, excludeAppointmentUuid);
+                int available = Math.max(capacity - booked, 0);
+
+                if (available > 0 && StringUtils.isNotBlank(patientUuid) && isPatientBusy(patientUuid, s, e, excludeAppointmentUuid)) {
+                    available = 0;
+                }
                 slot.setBooked(booked);
-                slot.setAvailable(Math.max(capacity - booked, 0));
+                slot.setAvailable(available);
             }
             slots.add(slot);
         }
 
         return slots;
+    }
+
+    private boolean isPatientBusy(String patientUuid, Date slotStart, Date slotEnd, String excludeAppointmentUuid) {
+        List<AppointmentStatus> statuses = AppointmentServiceCapacityUtil.SLOT_BLOCKING_STATUSES;
+        return appointmentDao.countOverlappingAppointmentsForPatient(
+        patientUuid, slotStart, slotEnd, excludeAppointmentUuid, statuses) > 0;
     }
 
     private int countBookedAppointments(AppointmentServiceDefinition service, Provider provider, Date slotStart, Date slotEnd, String excludeAppointmentUuid) {

@@ -15,7 +15,7 @@ public interface AppointmentSlotAvailabilityService {
     
     @Transactional(readOnly = true)
     @Authorized({VIEW_APPOINTMENTS_SERVICE, MANAGE_APPOINTMENTS_SERVICE})
-    List<AppointmentSlotAvailability> getAvailableSlots(String serviceUuid, Date date, String excludeAppointmentUuid);
+    List<AppointmentSlotAvailability> getAvailableSlots(String serviceUuid, Date date, String excludeAppointmentUuid, String patientUuid);
 
     @Transactional(readOnly = true)
     boolean isSlotCapacityExceeded(Appointment appointment);

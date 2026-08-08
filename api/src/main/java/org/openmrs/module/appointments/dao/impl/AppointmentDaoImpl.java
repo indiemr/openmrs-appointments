@@ -302,6 +302,42 @@ public class AppointmentDaoImpl implements AppointmentDao {
             Number count = (Number) criteria.uniqueResult();
             return count != null ? count.intValue() : 0;
         }
+
+    @Override
+    public int countOverlappingAppointmentsForPatient(
+        String patientUuid,
+        Date slotStart,
+        Date slotEnd,
+        String excludeAppointmentUuid,
+        List<AppointmentStatus> appointmentStatusFilterList) {
+            Criteria criteria = sessionFactory.getCurrentSession().createCriteria(Appointment.class, "appointment");
+            criteria.add(Restrictions.eq("voided", false));
+            criteria.createAlias("patient", "patient");
+            criteria.add(Restrictions.eq("patient.uuid", patientUuid));
+            criteria.add(Restrictions.eq("patient.voided", false));
+            criteria.add(Restrictions.eq("patient.personVoided", false));
+
+            // same overlap rule as PatientDoubleBookingConflict / existing slot counts
+            criteria.add(Restrictions.lt("startDateTime", slotEnd));
+            criteria.add(Restrictions.gt("endDateTime", slotStart));
+
+            // consider: timed only — 
+            // date-only should not block timed slots
+            criteria.add(Restrictions.or(
+                Restrictions.eq("dateOnly", false),
+                Restrictions.isNull("dateOnly")
+            ));
+
+            if (appointmentStatusFilterList != null && !appointmentStatusFilterList.isEmpty()) {
+                criteria.add(Restrictions.in("status", appointmentStatusFilterList));
+            }
+            if (StringUtils.isNotBlank(excludeAppointmentUuid)) {
+                criteria.add(Restrictions.ne("uuid", excludeAppointmentUuid));
+            }
+            criteria.setProjection(Projections.countDistinct("appointmentId"));
+            Number count = (Number) criteria.uniqueResult();
+            return count != null ? count.intValue() : 0;
+        }
     
 
     private void setProviderCriteria(AppointmentSearchRequest appointmentSearchRequest, Criteria criteria) {

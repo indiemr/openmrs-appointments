@@ -54,4 +54,11 @@ public interface AppointmentDao {
         Date slotEnd,
         String excludeAppointmentUuid,
         List<AppointmentStatus> statuses);
+
+    int countOverlappingAppointmentsForPatient(
+        String patientUuid,
+        Date slotStart,
+        Date slotEnd,
+        String excludeAppointmentUuid,
+        List<AppointmentStatus> statuses);
 }
