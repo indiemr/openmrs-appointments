@@ -366,8 +366,15 @@ public class AppointmentsServiceImpl implements AppointmentsService {
     }
 
     private List<Appointment> getNonVoidedFutureAppointments(List<Appointment> appointments) {
+        Date startOfDay = getStartOfDay();
         return appointments.stream().filter(appointment -> {
-            return !(appointment.getVoided() || appointment.getStartDateTime().before(getStartOfDay()));
+            if (appointment.getVoided()) {
+                return false;
+            }
+            if (appointment.isDateOnlyAppointment()) {
+                return appointment.getAppointmentDate() != null && !appointment.getAppointmentDate().before(startOfDay);
+            }
+            return appointment.getStartDateTime() != null && !appointment.getStartDateTime().before(startOfDay);
         }).collect(Collectors.toList());
     }
 

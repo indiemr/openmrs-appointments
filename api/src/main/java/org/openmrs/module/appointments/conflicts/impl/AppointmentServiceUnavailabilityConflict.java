@@ -43,6 +43,20 @@ public class AppointmentServiceUnavailabilityConflict implements AppointmentConf
     }
 
     private boolean checkConflicts(Appointment appointment, AppointmentServiceDefinition appointmentServiceDefinition) {
+        if (appointment.isDateOnlyAppointment()) {
+            if (appointment.getAppointmentDate() == null) {
+                return false;
+            }
+            Set<ServiceWeeklyAvailability> weeklyAvailableDays = appointmentServiceDefinition.getWeeklyAvailability();
+            if (!isObjectPresent(weeklyAvailableDays)) {
+                return false;
+            }
+            String appointmentDay = DayFormat.format(appointment.getAppointmentDate());
+            boolean dayAvailable = weeklyAvailableDays.stream()
+                    .anyMatch(day -> day.isSameDay(appointmentDay));
+            return !dayAvailable;  // conflict only if service not available that day
+        }
+
         Set<ServiceWeeklyAvailability> weeklyAvailableDays = appointmentServiceDefinition.getWeeklyAvailability();
         if (isObjectPresent(weeklyAvailableDays)) {
             String appointmentDay = DayFormat.format(appointment.getStartDateTime());

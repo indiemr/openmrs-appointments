@@ -30,6 +30,8 @@ public class AppointmentDefaultResponse {
 	private String priority;
 	private List<AppointmentReasonResponse> reasons;
 	private AppointmentBillSummary bill;
+	private Boolean dateOnly;
+	private String appointmentDate; // return as "yyyy-MM-dd", not epoch
 
 	public String getUuid() {
 		return uuid;
@@ -220,5 +222,21 @@ public class AppointmentDefaultResponse {
 	
 	public void setBill(AppointmentBillSummary bill) {
 		this.bill = bill;
+	}
+
+	public Boolean getDateOnly() {
+		return dateOnly;
+	}
+
+	public void setDateOnly(Boolean dateOnly) {
+		this.dateOnly = dateOnly;
+	}
+
+	public String getAppointmentDate() {
+		return appointmentDate;
+	}
+
+	public void setAppointmentDate(String appointmentDate) {
+		this.appointmentDate = appointmentDate;
 	}
 }

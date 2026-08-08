@@ -1,6 +1,7 @@
 package org.openmrs.module.appointments.conflicts.impl;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.time.DateUtils;
 import org.openmrs.module.appointments.conflicts.AppointmentConflict;
 import org.openmrs.module.appointments.model.AppointmentConflictType;
 import org.openmrs.module.appointments.dao.AppointmentDao;
@@ -54,6 +55,13 @@ public class PatientDoubleBookingConflict implements AppointmentConflict {
     }
 
     private boolean isAppointmentOverlapping(Appointment patientAppointment, Appointment appointment) {
+        if (appointment.isDateOnlyAppointment() || patientAppointment.isDateOnlyAppointment()) {
+            if (!appointment.isDateOnlyAppointment() || !patientAppointment.isDateOnlyAppointment()) {
+                return false; // date-only does not conflict with timed slots
+            }
+            return DateUtils.isSameDay(
+                    appointment.getAppointmentDate(), patientAppointment.getAppointmentDate());
+        }
         Date startTime = patientAppointment.getStartDateTime();
         Date endTime = patientAppointment.getEndDateTime();
         return appointment.getStartDateTime().before(endTime) && appointment.getEndDateTime().after(startTime);

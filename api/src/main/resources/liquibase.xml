@@ -1146,4 +1146,21 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="add_date_only_columns_to_patient_appointment" author="senthil-athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="patient_appointment" columnName="date_only" />
+            </not>
+        </preConditions>
+        <comment>Support date-only appointments without time slots</comment>
+        <addColumn tableName="patient_appointment">
+            <column name="date_only" type="boolean" defaultValue="false">
+                <constraints nullable="false" />
+            </column>
+            <column name="appointment_date" type="date">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

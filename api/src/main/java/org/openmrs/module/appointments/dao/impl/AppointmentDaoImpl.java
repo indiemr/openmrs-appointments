@@ -1,6 +1,7 @@
 package org.openmrs.module.appointments.dao.impl;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.time.DateUtils;
 import org.hibernate.Criteria;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Example;
@@ -8,6 +9,7 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.criterion.Conjunction;
 import org.hibernate.criterion.Disjunction;
 import org.hibernate.sql.JoinType;
 import org.openmrs.Provider;
@@ -21,6 +23,8 @@ import org.openmrs.module.appointments.model.AppointmentSearchRequest;
 import org.openmrs.module.appointments.model.AppointmentPriority;
 import org.openmrs.module.appointments.util.DateUtil;
 import org.springframework.transaction.annotation.Transactional;
+
+import liquibase.pro.packaged.da;
 
 import java.util.Collections;
 import java.util.Date;
@@ -43,10 +47,27 @@ public class AppointmentDaoImpl implements AppointmentDao {
         criteria.createAlias("patient", "patient");
         criteria.add(Restrictions.eq("patient.voided", false));
         criteria.add(Restrictions.eq("patient.personVoided", false));
+    
         if (forDate != null) {
-            Date maxDate = new Date(forDate.getTime() + TimeUnit.DAYS.toMillis(1));
-            criteria.add(Restrictions.ge("startDateTime", forDate));
-            criteria.add(Restrictions.lt("endDateTime", maxDate));
+            Date dayStart = org.apache.commons.lang.time.DateUtils.truncate(forDate, java.util.Calendar.DAY_OF_MONTH);
+            Date dayEnd = new Date(dayStart.getTime() + TimeUnit.DAYS.toMillis(1));
+            Date maxDate = dayEnd;
+    
+            Disjunction dateFilter = Restrictions.disjunction();
+    
+            Conjunction timed = Restrictions.conjunction();
+            timed.add(Restrictions.or(Restrictions.eq("dateOnly", false), Restrictions.isNull("dateOnly")));
+            timed.add(Restrictions.ge("startDateTime", dayStart));
+            timed.add(Restrictions.lt("endDateTime", maxDate));
+            dateFilter.add(timed);
+    
+            Conjunction dateOnly = Restrictions.conjunction();
+            dateOnly.add(Restrictions.eq("dateOnly", true));
+            dateOnly.add(Restrictions.ge("appointmentDate", dayStart));
+            dateOnly.add(Restrictions.lt("appointmentDate", maxDate));
+            dateFilter.add(dateOnly);
+    
+            criteria.add(dateFilter);
         }
         return criteria.list();
     }
@@ -198,6 +219,10 @@ public class AppointmentDaoImpl implements AppointmentDao {
         criteria.add(Restrictions.eq("service.appointmentServiceId", appointmentServiceDefinition.getAppointmentServiceId()));
         criteria.add(Restrictions.lt("startDateTime", slotEnd));
         criteria.add(Restrictions.gt("endDateTime", slotStart));
+        criteria.add(Restrictions.or(
+            Restrictions.eq("dateOnly", false),
+            Restrictions.isNull("dateOnly")
+        ));
         if (appointmentStatusFilterList != null && !appointmentStatusFilterList.isEmpty()) {
             criteria.add(Restrictions.in("status", appointmentStatusFilterList));
         }
@@ -242,6 +267,11 @@ public class AppointmentDaoImpl implements AppointmentDao {
 
             criteria.add(Restrictions.lt("startDateTime", slotEnd));
             criteria.add(Restrictions.gt("endDateTime", slotStart));
+
+            criteria.add(Restrictions.or(
+                Restrictions.eq("dateOnly", false),
+                Restrictions.isNull("dateOnly")
+            ));
 
             if (appointmentStatusFilterList != null && !appointmentStatusFilterList.isEmpty()) {
                 criteria.add(Restrictions.in("status", appointmentStatusFilterList));
@@ -292,13 +322,52 @@ public class AppointmentDaoImpl implements AppointmentDao {
     }
 
     private void setDateCriteria(AppointmentSearchRequest appointmentSearchRequest, Criteria criteria) {
-        if (appointmentSearchRequest.getStartDate() != null) {
-            criteria.add(Restrictions.ge("startDateTime", appointmentSearchRequest.getStartDate()));
+        Date startDate = appointmentSearchRequest.getStartDate();
+        Date endDate = appointmentSearchRequest.getEndDate();
+
+        if (startDate == null && endDate == null) {
+            return;
         }
-        if (appointmentSearchRequest.getEndDate() != null) {
-            criteria.add(Restrictions.le("startDateTime", appointmentSearchRequest.getEndDate()));
+
+        Disjunction dateFilter = Restrictions.disjunction();
+
+        Conjunction timed = Restrictions.conjunction();
+
+        timed.add(Restrictions.or(
+            Restrictions.eq("dateOnly", false),
+            Restrictions.isNull("dateOnly")
+        ));
+
+        if (startDate != null) {
+            timed.add(Restrictions.ge("startDateTime", startDate));
         }
+        if (endDate != null) {
+            timed.add(Restrictions.le("startDateTime", endDate));
+        }
+        dateFilter.add(timed);
+
+        Conjunction dateOnly = Restrictions.conjunction();
+        dateOnly.add(Restrictions.eq("dateOnly", true));
+        if (startDate != null) {
+            dateOnly.add(Restrictions.ge("appointmentDate",
+                    DateUtils.truncate(startDate, java.util.Calendar.DAY_OF_MONTH)));
+        }
+        if (endDate != null) {
+            dateOnly.add(Restrictions.le("appointmentDate",
+                    DateUtils.truncate(endDate, java.util.Calendar.DAY_OF_MONTH)));
+        }
+        dateFilter.add(dateOnly);
+        criteria.add(dateFilter);
     }
+
+    // private void setDateCriteria(AppointmentSearchRequest appointmentSearchRequest, Criteria criteria) {
+    //     if (appointmentSearchRequest.getStartDate() != null) {
+    //         criteria.add(Restrictions.ge("startDateTime", appointmentSearchRequest.getStartDate()));
+    //     }
+    //     if (appointmentSearchRequest.getEndDate() != null) {
+    //         criteria.add(Restrictions.le("startDateTime", appointmentSearchRequest.getEndDate()));
+    //     }
+    // }
 
     private void setLimitCriteria(AppointmentSearchRequest appointmentSearchRequest, Criteria criteria) {
         if (appointmentSearchRequest.getLimit() > 0) {
@@ -323,7 +392,16 @@ public class AppointmentDaoImpl implements AppointmentDao {
         criteria.add(Restrictions.eq("voided", false));
         criteria.add(Restrictions.eq("patient.voided", false));
         criteria.add(Restrictions.eq("patient.personVoided", false));
-        criteria.add(Restrictions.ge("startDateTime", DateUtil.getStartOfDay()));
+        criteria.add(Restrictions.or(
+            Restrictions.and(
+                    Restrictions.eq("dateOnly", true),
+                    Restrictions.ge("appointmentDate", DateUtil.getStartOfDay())
+            ),
+            Restrictions.and(
+                    Restrictions.or(Restrictions.eq("dateOnly", false), Restrictions.isNull("dateOnly")),
+                    Restrictions.ge("startDateTime", DateUtil.getStartOfDay())
+            )
+    ));
 
         return criteria.list();
     }

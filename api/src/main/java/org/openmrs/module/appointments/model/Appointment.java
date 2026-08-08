@@ -68,6 +68,9 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
      */
     private List<NotificationResult> notificationResults;
 
+    private Boolean dateOnly = false;
+    private Date appointmentDate;
+
     public Set<AppointmentAudit> getAppointmentAudits() {
         return appointmentAudits;
     }
@@ -221,6 +224,9 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
     }
 
     public Date getDateFromStartDateTime() {
+        if (isDateOnlyAppointment() && appointmentDate != null) {
+            return DateUtils.truncate(appointmentDate, java.util.Calendar.DAY_OF_MONTH);
+        }
         return DateUtils.truncate(getStartDateTime(), java.util.Calendar.DAY_OF_MONTH);
     }
 
@@ -237,6 +243,13 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
     }
 
     public Boolean isFutureAppointment() {
+        if (isDateOnlyAppointment() && appointmentDate != null) {
+            Date startOfDate = DateUtil.getStartOfDay();
+            return !appointmentDate.before(startOfDate);
+        }
+        if (getStartDateTime() == null) {
+            return false;
+        }
         Date startOfDay = DateUtil.getStartOfDay();
         return this.getStartDateTime().after(startOfDay) || startOfDay.equals(this.getStartDateTime());
     }
@@ -288,6 +301,26 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
     
     public void setCreateBill(Boolean createBill) {
         this.createBill = createBill;
+    }
+
+    public Boolean getDateOnly() {
+        return dateOnly;
+    }
+    
+    public void setDateOnly(Boolean dateOnly) {
+        this.dateOnly = dateOnly;
+    }
+    
+    public Date getAppointmentDate() {
+        return appointmentDate;
+    }
+    
+    public void setAppointmentDate(Date appointmentDate) {
+        this.appointmentDate = appointmentDate;
+    }
+    
+    public boolean isDateOnlyAppointment() {
+        return Boolean.TRUE.equals(dateOnly);
     }
 
     @Override
