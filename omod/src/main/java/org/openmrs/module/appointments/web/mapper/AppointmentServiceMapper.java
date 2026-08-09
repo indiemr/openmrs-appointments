@@ -5,7 +5,9 @@ import org.openmrs.module.ModuleFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.lang.StringUtils;
+import org.openmrs.Concept;
 import org.openmrs.Location;
+import org.openmrs.api.ConceptService;
 import org.openmrs.api.LocationService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.appointments.model.AppointmentServiceAttribute;
@@ -50,6 +52,9 @@ public class AppointmentServiceMapper {
     @Autowired 
     ProviderService providerService;
 
+    @Autowired
+    ConceptService conceptService;
+
     private static final Log log = LogFactory.getLog(AppointmentServiceMapper.class);
 
     public AppointmentServiceDefinition fromDescription(AppointmentServiceDescription appointmentServiceDescription) {
@@ -68,6 +73,22 @@ public class AppointmentServiceMapper {
         appointmentServiceDefinition.setMaxAppointmentsPerSlot(appointmentServiceDescription.getMaxAppointmentsPerSlot());
         appointmentServiceDefinition.setColor(appointmentServiceDescription.getColor());
         Boolean allowPatientBooking = appointmentServiceDescription.getAllowPatientBooking();
+        String serviceCategoryUuid = appointmentServiceDescription.getServiceCategoryUuid();
+
+        if (StringUtils.isNotBlank(serviceCategoryUuid)) {
+            Concept serviceCategory = conceptService.getConceptByUuid(serviceCategoryUuid);
+            if (serviceCategory == null || Boolean.TRUE.equals(serviceCategory.getRetired())) {
+                throw new RuntimeException("Invalid serviceCategory");
+            }
+            appointmentServiceDefinition.setServiceCategory(serviceCategory);
+        } else if (StringUtils.isBlank(appointmentServiceDefinition.getUuid())) {
+            // create without category
+            appointmentServiceDefinition.setServiceCategory(null);
+        } else if (serviceCategoryUuid != null && serviceCategoryUuid.isEmpty()) {
+            // explicit clear on edit: send ""
+            appointmentServiceDefinition.setServiceCategory(null);
+        }
+
         if (allowPatientBooking != null) {
             appointmentServiceDefinition.setAllowPatientBooking(allowPatientBooking);
         } else if (appointmentServiceDefinition.getAllowPatientBooking() == null) {
@@ -346,6 +367,15 @@ public class AppointmentServiceMapper {
             providerMap.put("uuid", provider.getUuid());
             asResponse.setProvider(providerMap);
         }
+
+        Map serviceCategoryMap = new HashMap<>();
+        Concept serviceCategory = as.getServiceCategory();
+        if (serviceCategory != null) {
+            serviceCategoryMap.put("uuid", serviceCategory.getUuid());
+            serviceCategoryMap.put("name", serviceCategory.getName().getName());
+        }
+        asResponse.setServiceCategory(serviceCategoryMap);
+
         asResponse.setLocation(locationMap);
 
         Set<AppointmentServiceAttribute> attributes = as.getAttributes();

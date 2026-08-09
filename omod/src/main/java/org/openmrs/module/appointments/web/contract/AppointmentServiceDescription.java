@@ -31,6 +31,15 @@ public class AppointmentServiceDescription {
     private Boolean allowPatientBooking;
     private String serviceMode;
     private String billableServiceUuid;
+    private String serviceCategoryUuid;
+
+    public String getServiceCategoryUuid() {
+        return serviceCategoryUuid;
+    }
+    
+    public void setServiceCategoryUuid(String serviceCategoryUuid) {
+        this.serviceCategoryUuid = serviceCategoryUuid;
+    }
 
     public String getServiceMode() { 
         return serviceMode; 

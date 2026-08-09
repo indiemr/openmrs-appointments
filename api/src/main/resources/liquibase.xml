@@ -1163,4 +1163,25 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="add_service_category_concept_to_appointment_service" author="senthil-athiba">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_service" columnName="service_category_concept_id" />
+            </not>
+        </preConditions>
+        <comment>Categorize appointment service using OpenMRS concept (follow-up, therapy, etc.)</comment>
+        <addColumn tableName="appointment_service">
+            <column name="service_category_concept_id" type="int">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+        <addForeignKeyConstraint 
+            constraintName="fk_appointment_service_service_category_concept" 
+            baseTableName="appointment_service" 
+            baseColumnNames="service_category_concept_id" 
+            referencedTableName="concept" 
+            referencedColumnNames="concept_id" 
+        />
+    </changeSet>
 </databaseChangeLog>

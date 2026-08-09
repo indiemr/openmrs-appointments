@@ -61,5 +61,6 @@
         </property>
         <property name="cancellationCutoffMinutes" type="java.lang.Integer" column="cancellation_cutoff_minutes" />
         <property name="billableServiceUuid" type="java.lang.String" column="billable_service_uuid" />
+        <many-to-one name="serviceCategory" class="org.openmrs.Concept" column="service_category_concept_id" />
     </class>
 </hibernate-mapping>

@@ -26,6 +26,15 @@ public class AppointmentServiceDefaultResponse {
 	private Boolean allowPatientBooking;
 	private String serviceMode;
 	private BillableServiceSummary billableService;
+	private Map serviceCategory;
+
+	public Map getServiceCategory() {
+		return serviceCategory;
+	}
+
+	public void setServiceCategory(Map serviceCategory) {
+		this.serviceCategory = serviceCategory;
+	}
 
 	public String getServiceMode() {
 		return serviceMode; 
