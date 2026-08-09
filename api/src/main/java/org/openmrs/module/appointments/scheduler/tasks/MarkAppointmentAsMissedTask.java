@@ -6,6 +6,7 @@ import org.openmrs.api.context.Context;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentStatus;
 import org.openmrs.module.appointments.service.AppointmentsService;
+import org.openmrs.module.appointments.util.AppointmentStatusUtil;
 import org.openmrs.scheduler.tasks.AbstractTask;
 
 import java.util.Date;
@@ -32,7 +33,7 @@ public class MarkAppointmentAsMissedTask extends AbstractTask {
                 .collect(Collectors.toList());
         for (Appointment appointment : scheduledAndCheckedInAppointments) {
             String status = AppointmentStatus.Missed.toString();
-            if ((!schedulerMarksComplete && appointment.getStatus().equals(AppointmentStatus.CheckedIn)) || appointment.getStatus().equals(AppointmentStatus.Scheduled)) {
+            if ((!schedulerMarksComplete && appointment.getStatus().equals(AppointmentStatus.CheckedIn)) || AppointmentStatusUtil.isConfirmed(appointment.getStatus())) {
                 appointmentsService.changeStatus(appointment, status, today);
             }
         }
@@ -43,6 +44,6 @@ public class MarkAppointmentAsMissedTask extends AbstractTask {
     }
 
     private boolean isAppointmentScheduled(Appointment appointment) {
-        return appointment.getStatus().equals(AppointmentStatus.Scheduled);
+        return AppointmentStatusUtil.isConfirmed(appointment.getStatus());
     }
 }

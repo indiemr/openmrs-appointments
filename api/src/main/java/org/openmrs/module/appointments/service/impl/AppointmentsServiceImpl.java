@@ -27,6 +27,7 @@ import org.openmrs.module.appointments.notification.NotificationResult;
 import org.openmrs.module.appointments.service.AppointmentNumberGenerator;
 import org.openmrs.module.appointments.service.AppointmentNumberGeneratorLocator;
 import org.openmrs.module.appointments.service.AppointmentsService;
+import org.openmrs.module.appointments.util.AppointmentStatusUtil;
 import org.openmrs.module.appointments.validator.AppointmentStatusChangeValidator;
 import org.openmrs.module.appointments.validator.AppointmentValidator;
 import org.springframework.transaction.annotation.Transactional;
@@ -303,7 +304,7 @@ public class AppointmentsServiceImpl implements AppointmentsService {
     }
 
     private boolean isUserAllowedToResetStatus(AppointmentStatus toStatus, AppointmentStatus currentStatus) {
-        if (!toStatus.equals(AppointmentStatus.Scheduled)) return true;
+        if (!AppointmentStatusUtil.isConfirmed(toStatus)) return true;
         if (currentStatus.equals(AppointmentStatus.Requested)) return true;
         return Context.hasPrivilege(RESET_APPOINTMENT_STATUS);
     }

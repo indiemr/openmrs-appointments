@@ -4,6 +4,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.openmrs.api.APIException;
 import org.openmrs.module.appointments.model.*;
 import org.openmrs.module.appointments.service.AppointmentsService;
+import org.openmrs.module.appointments.util.AppointmentStatusUtil;
 import org.openmrs.module.appointments.web.contract.RecurringAppointmentRequest;
 import org.openmrs.module.appointments.web.mapper.AppointmentMapper;
 import org.openmrs.module.appointments.web.mapper.RecurringPatternMapper;
@@ -103,7 +104,7 @@ public class AllAppointmentRecurringPatternUpdateService {
     }
 
     private boolean isRequestedOrScheduledAppointment(Appointment app) {
-        return app.getStatus() == AppointmentStatus.Requested || app.getStatus() == AppointmentStatus.Scheduled;
+        return app.getStatus() == AppointmentStatus.Requested || AppointmentStatusUtil.isConfirmed(app.getStatus());
     }
 
     private void updateMetadata(Appointment pendingAppointment, Appointment appointment) {

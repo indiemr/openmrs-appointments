@@ -14,6 +14,7 @@ import org.openmrs.module.appointments.model.AppointmentServiceAttribute;
 import org.openmrs.module.appointments.service.AppointmentServiceDefinitionService;
 import org.openmrs.module.appointments.service.AppointmentsService;
 import org.openmrs.module.appointments.util.AppointmentServiceLocationUtil;
+import org.openmrs.module.appointments.util.AppointmentStatusUtil;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
@@ -83,9 +84,12 @@ public class AppointmentServiceDefinitionServiceImpl implements AppointmentServi
 
     @Override
     public Integer calculateCurrentLoad(AppointmentServiceDefinition appointmentServiceDefinition, Date startDateTime, Date endDateTime) {
-        AppointmentStatus[] includeStatus = new AppointmentStatus[]{AppointmentStatus.CheckedIn, AppointmentStatus.Completed, AppointmentStatus.Scheduled};
+        List<AppointmentStatus> includeStatus = new ArrayList<>();
+        includeStatus.add(AppointmentStatus.CheckedIn);
+        includeStatus.add(AppointmentStatus.Completed);
+        includeStatus.addAll(AppointmentStatusUtil.confirmedStatuses());
         List<Appointment> appointmentsForService = appointmentsService
-                .getAppointmentsForService(appointmentServiceDefinition, startDateTime, endDateTime, Arrays.asList(includeStatus));
+                .getAppointmentsForService(appointmentServiceDefinition, startDateTime, endDateTime, includeStatus);
         return appointmentsForService.size();
     }
 
