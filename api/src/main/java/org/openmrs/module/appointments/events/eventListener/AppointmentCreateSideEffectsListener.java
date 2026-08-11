@@ -104,7 +104,7 @@ public class AppointmentCreateSideEffectsListener {
             }
         }
 
-        // 4) Calendar sync
+        // 4) Calendar sync (service skips date-only / non-confirmed)
         try {
             if (cancelled) {
                 appointmentCalendarService.cancelCalendarEventForAppointment(appointmentUuid);

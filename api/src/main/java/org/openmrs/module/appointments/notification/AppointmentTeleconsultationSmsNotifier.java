@@ -3,6 +3,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.appointments.constants.SmsGlobalPropertyConstants;
 import org.openmrs.module.appointments.helper.AppointmentSmsHelper;
@@ -14,11 +16,19 @@ import org.springframework.stereotype.Component;
 @Component
 public class AppointmentTeleconsultationSmsNotifier {
     private static final String TELE_SMS_MESSAGE = "tele";
+    private static final Log log = LogFactory.getLog(AppointmentTeleconsultationSmsNotifier.class);
 
 
     public void sendTeleconsultationSms(Appointment appointment, AppointmentArgumentsMapper appointmentArgumentsMapper) {
         String phoneNumber = AppointmentSmsHelper.getPhoneNumber(appointment, "Phone number not found");
         if (phoneNumber == null) {
+            return;
+        }
+        Map<String, String> arguments = appointmentArgumentsMapper.createArgumentsMapForAppointmentBooking(appointment);
+        String teleLink = getTeleconsultationLink(appointment, arguments);
+        if (StringUtils.isBlank(teleLink)) {
+            log.info("Skipping teleconsultation SMS: teleconsultation link not found for appointment "
+                    + (appointment != null ? appointment.getUuid() : null));
             return;
         }
         OutgoingSms outgoingSms = buildOutgoingSms(phoneNumber, appointment, appointmentArgumentsMapper);
