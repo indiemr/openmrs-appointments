@@ -18,6 +18,7 @@ import org.openmrs.module.appointments.notification.AppointmentRescheduleSmsNoti
 import org.openmrs.module.appointments.notification.AppointmentTeleconsultationSmsNotifier;
 import org.openmrs.module.appointments.service.AppointmentArgumentsMapper;
 import org.openmrs.module.appointments.service.AppointmentsService;
+import org.openmrs.module.appointments.util.AppointmentStatusUtil;
 import org.openmrs.util.PrivilegeConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -175,6 +176,9 @@ public class AppointmentSMSEventListener {
     }
 
     private boolean shouldSendBookingSms(Appointment appointment) {
+        if (!isConfirmedAppointment(appointment)) {
+            return false;
+        }
         if (Boolean.FALSE.equals(appointment.getSendSms())) {
             log.info("Skipping booking SMS: sendSms=false on appointment request.");
             return false;
@@ -183,6 +187,9 @@ public class AppointmentSMSEventListener {
     }
 
     private boolean shouldSendReschedulingSms(Appointment appointment) {
+        if (!isConfirmedAppointment(appointment)) {
+            return false;
+        }
         if (Boolean.FALSE.equals(appointment.getSendSms())) {
             log.info("Skipping reschedule SMS: sendSms=false on appointment request.");
             return false;
@@ -217,6 +224,9 @@ public class AppointmentSMSEventListener {
     }
 
     private boolean shouldSendTeleconsultationSms(Appointment appointment) {
+        if (!isConfirmedAppointment(appointment)) {
+            return false;
+        }
         if (Boolean.FALSE.equals(appointment.getSendSms())) {
             log.info("Skipping teleconsultation SMS: sendSms=false on appointment request.");
            return false;
@@ -229,5 +239,15 @@ public class AppointmentSMSEventListener {
         } finally {
             Context.getUserContext().removeProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
         }
+    }
+
+    private boolean isConfirmedAppointment(Appointment appointment) {
+        if (appointment == null || !AppointmentStatusUtil.isConfirmed(appointment.getStatus())) {
+            log.info("Skipping SMS: appointment status is not Confirmed for "
+                    + (appointment != null ? appointment.getUuid() : null)
+                    + " status=" + (appointment != null ? appointment.getStatus() : null));
+            return false;
+        }
+        return true;
     }
 }
