@@ -81,11 +81,8 @@ public class AppointmentServiceMapper {
                 throw new RuntimeException("Invalid serviceCategory");
             }
             appointmentServiceDefinition.setServiceCategory(serviceCategory);
-        } else if (StringUtils.isBlank(appointmentServiceDefinition.getUuid())) {
-            // create without category
-            appointmentServiceDefinition.setServiceCategory(null);
-        } else if (serviceCategoryUuid != null && serviceCategoryUuid.isEmpty()) {
-            // explicit clear on edit: send ""
+        } else {
+            // omit, null, or "" → remove category (create or update)
             appointmentServiceDefinition.setServiceCategory(null);
         }
 

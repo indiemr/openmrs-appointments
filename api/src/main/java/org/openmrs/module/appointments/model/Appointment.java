@@ -106,7 +106,7 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
 
     public Appointment() {
         super();
-        this.status = AppointmentStatus.Scheduled;
+        this.status = AppointmentStatus.Confirmed;
     }
 
     @Override

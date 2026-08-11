@@ -393,7 +393,7 @@ public class AppointmentsServiceImpl implements AppointmentsService {
         existingProviderInAppointment.setResponse(providerWithNewResponse.getResponse());
 
         if (isFirstAcceptForRequestedAppointment(providerWithNewResponse, appointment)) {
-            changeStatus(appointment, AppointmentStatus.Scheduled.name(), Date.from(Instant.now()));
+            changeStatus(appointment, AppointmentStatus.Confirmed.name(), Date.from(Instant.now()));
         } else {
             appointmentDao.save(appointment);
         }
@@ -443,7 +443,7 @@ public class AppointmentsServiceImpl implements AppointmentsService {
             if (retainAppointmentNumber) {
                 newAppointment.setAppointmentNumber(prevAppointment.getAppointmentNumber());
             }
-            newAppointment.setStatus(AppointmentStatus.Scheduled);
+            newAppointment.setStatus(AppointmentStatus.Confirmed);
             validateAndSave(newAppointment);
 
             return newAppointment;

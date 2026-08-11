@@ -1184,4 +1184,45 @@
             referencedColumnNames="concept_id" 
         />
     </changeSet>
+
+    <changeSet id="migrate_waitlist_scheduled_to_tentative_confirmed" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="patient_appointment" />
+        </preConditions>
+        <comment>
+            Rename appointment status values for friendlier naming:
+            WaitList -&gt; Tentative, Scheduled -&gt; Confirmed.
+            Dual-support enum values remain in code for API compatibility.
+        </comment>
+
+        <!-- current appointment status -->
+        <update tableName="patient_appointment">
+            <column name="status" value="Tentative" />
+            <where>status = 'WaitList'</where>
+        </update>
+        <update tableName="patient_appointment">
+            <column name="status" value="Confirmed" />
+            <where>status = 'Scheduled'</where>
+        </update>
+
+        <!-- audit history -->
+         <update tableName="patient_appointment_audit">
+            <column name="status" value="Tentative" />
+            <where>status = 'WaitList'</where>
+         </update>
+         <update tableName="patient_appointment_audit">
+            <column name="status" value="Confirmed" />
+            <where>status = 'Scheduled'</where>
+         </update>
+
+        <!-- service default/initial status -->
+         <update tableName="appointment_service">
+            <column name="initial_appointment_status" value="Tentative" />
+            <where>initial_appointment_status = 'WaitList'</where>
+         </update>
+         <update tableName="appointment_service">
+            <column name="initial_appointment_status" value="Confirmed" />
+            <where>initial_appointment_status = 'Scheduled'</where>
+         </update>
+    </changeSet>
 </databaseChangeLog>
