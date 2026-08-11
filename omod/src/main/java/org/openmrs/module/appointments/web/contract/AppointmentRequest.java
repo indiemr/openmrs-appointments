@@ -27,6 +27,8 @@ public class AppointmentRequest {
     private List<String> reasonConceptUuids;
     private Boolean sendSms;
     private Boolean createBill;
+    private Boolean dateOnly = false;
+    private String appointmentDate; // "yyyy-MM-dd"
 
     public Boolean getCreateBill() {
         return createBill;
@@ -170,5 +172,21 @@ public class AppointmentRequest {
 
     public void setReasonConceptUuids(List<String> reasonConceptUuids) {
         this.reasonConceptUuids = reasonConceptUuids;
+    }
+
+    public Boolean getDateOnly() {
+        return dateOnly;
+    }
+
+    public void setDateOnly(Boolean dateOnly) {
+        this.dateOnly = dateOnly;
+    }
+
+    public String getAppointmentDate() {
+        return appointmentDate;
+    }
+
+    public void setAppointmentDate(String appointmentDate) {
+        this.appointmentDate = appointmentDate;
     }
 }

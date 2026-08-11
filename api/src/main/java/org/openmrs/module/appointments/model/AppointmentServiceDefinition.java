@@ -1,6 +1,7 @@
 package org.openmrs.module.appointments.model;
 
 import org.openmrs.BaseOpenmrsData;
+import org.openmrs.Concept;
 import org.openmrs.Location;
 import org.openmrs.Provider;
 import org.openmrs.customdatatype.Customizable;
@@ -39,6 +40,7 @@ public class AppointmentServiceDefinition extends BaseOpenmrsData implements Ser
     private Boolean allowPatientBooking;
     private AppointmentServiceMode serviceMode;
     private String billableServiceUuid;
+    private Concept serviceCategory;
 
     public Location getLocation() {
         return location;
@@ -166,6 +168,14 @@ public class AppointmentServiceDefinition extends BaseOpenmrsData implements Ser
 
     public void setBillableServiceUuid(String billableServiceUuid) {
         this.billableServiceUuid = billableServiceUuid;
+    }
+
+    public Concept getServiceCategory() {
+        return serviceCategory;
+    }
+    
+    public void setServiceCategory(Concept serviceCategory) {
+        this.serviceCategory = serviceCategory;
     }
 
     @Override

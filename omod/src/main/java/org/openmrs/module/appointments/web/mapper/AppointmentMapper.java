@@ -27,6 +27,7 @@ import org.openmrs.module.appointments.model.AppointmentServiceType;
 import org.openmrs.module.appointments.model.AppointmentStatus;
 import org.openmrs.module.appointments.service.AppointmentServiceDefinitionService;
 import org.openmrs.module.appointments.service.AppointmentsService;
+import org.openmrs.module.appointments.util.AppointmentDateOnlyUtil;
 import org.openmrs.module.appointments.web.contract.AppointmentBillSummary;
 import org.openmrs.module.appointments.web.contract.AppointmentDefaultResponse;
 import org.openmrs.module.appointments.web.contract.AppointmentProviderDetail;
@@ -125,8 +126,7 @@ public class AppointmentMapper {
         appointment.setService(appointmentServiceDefinition);
         //appointment.setProvider(identifyAppointmentProvider(appointmentRequest.getProviderUuid()));
         appointment.setLocation(identifyAppointmentLocation(appointmentRequest.getLocationUuid()));
-        appointment.setStartDateTime(appointmentRequest.getStartDateTime());
-        appointment.setEndDateTime(appointmentRequest.getEndDateTime());
+        
         appointment.setAppointmentKind(AppointmentKind.valueOf(appointmentRequest.getAppointmentKind()));
         appointment.setComments(appointmentRequest.getComments());
         appointment.setSendSms(appointmentRequest.getSendSms());
@@ -134,6 +134,27 @@ public class AppointmentMapper {
         if (appointmentRequest.getPriority() != null || StringUtils.isNotBlank(appointmentRequest.getPriority())) {
                 appointment.setPriority(AppointmentPriority.valueOf(appointmentRequest.getPriority()));
         }
+
+        if(Boolean.TRUE.equals(appointmentRequest.getDateOnly())) {
+            try {
+                Date parsedDate = AppointmentDateOnlyUtil.parseAppointmentDate(appointmentRequest.getAppointmentDate());
+                if (parsedDate == null) {
+                    throw new ConversionException("appointmentDate is required when dateOnly is true");
+                }
+                appointment.setDateOnly(true);
+                appointment.setAppointmentDate(parsedDate);
+                appointment.setStartDateTime(null);
+                appointment.setEndDateTime(null);
+            } catch (Exception e) {
+                throw new ConversionException("appointmentDate must be in yyyy-MM-dd format");
+            }
+        } else {
+            appointment.setDateOnly(false);
+            appointment.setAppointmentDate(null);
+            appointment.setStartDateTime(appointmentRequest.getStartDateTime());
+            appointment.setEndDateTime(appointmentRequest.getEndDateTime());
+        }
+
         mapProvidersForAppointment(appointment, appointmentRequest.getProviders());
         mapReasonsForAppointment(appointment, appointmentRequest.getReasonConceptUuids());
     }
@@ -276,8 +297,7 @@ public class AppointmentMapper {
         response.setServiceType(createServiceTypeMap(a.getServiceType()));
         //response.setProvider(createProviderMap(a.getProvider()));
         response.setLocation(createLocationMap(a.getLocation()));
-        response.setStartDateTime(a.getStartDateTime());
-        response.setEndDateTime(a.getEndDateTime());
+        
         response.setAppointmentKind(a.getAppointmentKind().name());
         response.setStatus(a.getStatus().name());
         response.setComments(a.getComments());
@@ -288,6 +308,16 @@ public class AppointmentMapper {
         response.setReasons(mapAppointmentReasons(a.getReasons()));
         response.setRecurring(a.isRecurring());
         response.setVoided(a.getVoided());
+        response.setDateOnly(a.isDateOnlyAppointment());
+        response.setAppointmentDate(AppointmentDateOnlyUtil.formatAppointmentDate(a.getAppointmentDate()));
+
+        if (a.isDateOnlyAppointment()) {
+            response.setStartDateTime(null);
+            response.setEndDateTime(null);
+        } else {
+            response.setStartDateTime(a.getStartDateTime());
+            response.setEndDateTime(a.getEndDateTime());
+        }
         if (StringUtils.isNotBlank(a.getBillUuid())) {
             AppointmentBillSummary billSummary = resolveAppointmentBillSummary(a.getBillUuid());
             if (billSummary != null) {

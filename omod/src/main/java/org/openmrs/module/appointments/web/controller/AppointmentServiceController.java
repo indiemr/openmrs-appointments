@@ -48,11 +48,15 @@ public class AppointmentServiceController extends BaseRestController {
     @RequestMapping(method = RequestMethod.GET, value = "availableSlots")
     @ResponseBody
     public List<AppointmentSlotAvailabilityResponse> getAvailableSlots
-        (@RequestParam("uuid") String serviceUuid, @RequestParam("date") String date,@RequestParam(value = "excludeAppointmentUuid", required = false) String excludeAppointmentUuid) throws ParseException {
+        (@RequestParam("uuid") String serviceUuid, 
+        @RequestParam("date") String date,
+        @RequestParam(value = "excludeAppointmentUuid", required = false) String excludeAppointmentUuid,
+        @RequestParam(value = "patientUuid", required = false) String patientUuid) 
+        throws ParseException {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         Date appointmentDate = dateFormat.parse(date);
         return appointmentSlotAvailabilityMapper.constructResponse(
-                appointmentSlotAvailabilityService.getAvailableSlots(serviceUuid, appointmentDate, excludeAppointmentUuid)
+                appointmentSlotAvailabilityService.getAvailableSlots(serviceUuid, appointmentDate, excludeAppointmentUuid, patientUuid)
         );
     }
     

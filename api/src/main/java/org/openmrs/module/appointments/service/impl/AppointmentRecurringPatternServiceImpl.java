@@ -14,6 +14,7 @@ import org.openmrs.module.appointments.service.AppointmentNumberGenerator;
 import org.openmrs.module.appointments.service.AppointmentNumberGeneratorLocator;
 import org.openmrs.module.appointments.service.AppointmentRecurringPatternService;
 import org.openmrs.module.appointments.service.RecurringAppointmentNumberGenerator;
+import org.openmrs.module.appointments.util.AppointmentStatusUtil;
 import org.openmrs.module.appointments.validator.AppointmentStatusChangeValidator;
 import org.openmrs.module.appointments.validator.AppointmentValidator;
 import org.springframework.transaction.annotation.Transactional;
@@ -142,8 +143,12 @@ public class AppointmentRecurringPatternServiceImpl implements AppointmentRecurr
         appointmentServiceHelper.validateStatusChangeAndGetErrors(appointment, appointmentStatus, statusChangeValidators);
         String serverTimeZone = Calendar.getInstance().getTimeZone().getID();
         TimeZone.setDefault(TimeZone.getTimeZone(clientTimeZone));
-        List<Appointment> pendingAppointments = getPendingOccurrences(appointment.getUuid(),
-                Arrays.asList(AppointmentStatus.Requested, AppointmentStatus.Scheduled, AppointmentStatus.CheckedIn));
+        List<AppointmentStatus> pendingStatuses = new ArrayList<>();
+        pendingStatuses.add(AppointmentStatus.Requested);
+        pendingStatuses.addAll(AppointmentStatusUtil.confirmedStatuses());
+        pendingStatuses.add(AppointmentStatus.CheckedIn);
+        
+        List<Appointment> pendingAppointments = getPendingOccurrences(appointment.getUuid(),pendingStatuses);
         TimeZone.setDefault(TimeZone.getTimeZone(serverTimeZone));
         pendingAppointments.stream()
                 .map(pendingAppointment -> {

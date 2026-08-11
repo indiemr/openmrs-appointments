@@ -112,7 +112,11 @@ public class AppointmentController extends BaseRestController {
                                     AppointmentStatus.Completed,
                                     AppointmentStatus.Scheduled,
                                     AppointmentStatus.CheckedIn,
-                                    AppointmentStatus.Missed));
+                                    AppointmentStatus.Missed,
+                                    AppointmentStatus.Confirmed,
+                                    AppointmentStatus.WaitList,
+                                    AppointmentStatus.Tentative
+                                ));
 
             Map<Date, List<Appointment>> appointmentsGroupedByDate =
                     appointmentsForService.stream().collect(Collectors.groupingBy(Appointment::getDateFromStartDateTime));

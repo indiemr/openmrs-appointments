@@ -1146,4 +1146,83 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="add_date_only_columns_to_patient_appointment" author="senthil-athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="patient_appointment" columnName="date_only" />
+            </not>
+        </preConditions>
+        <comment>Support date-only appointments without time slots</comment>
+        <addColumn tableName="patient_appointment">
+            <column name="date_only" type="boolean" defaultValue="false">
+                <constraints nullable="false" />
+            </column>
+            <column name="appointment_date" type="date">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="add_service_category_concept_to_appointment_service" author="senthil-athiba">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_service" columnName="service_category_concept_id" />
+            </not>
+        </preConditions>
+        <comment>Categorize appointment service using OpenMRS concept (follow-up, therapy, etc.)</comment>
+        <addColumn tableName="appointment_service">
+            <column name="service_category_concept_id" type="int">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+        <addForeignKeyConstraint 
+            constraintName="fk_appointment_service_service_category_concept" 
+            baseTableName="appointment_service" 
+            baseColumnNames="service_category_concept_id" 
+            referencedTableName="concept" 
+            referencedColumnNames="concept_id" 
+        />
+    </changeSet>
+
+    <changeSet id="migrate_waitlist_scheduled_to_tentative_confirmed" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="patient_appointment" />
+        </preConditions>
+        <comment>
+            Rename appointment status values for friendlier naming:
+            WaitList -&gt; Tentative, Scheduled -&gt; Confirmed.
+            Dual-support enum values remain in code for API compatibility.
+        </comment>
+
+        <!-- current appointment status -->
+        <update tableName="patient_appointment">
+            <column name="status" value="Tentative" />
+            <where>status = 'WaitList'</where>
+        </update>
+        <update tableName="patient_appointment">
+            <column name="status" value="Confirmed" />
+            <where>status = 'Scheduled'</where>
+        </update>
+
+        <!-- audit history -->
+         <update tableName="patient_appointment_audit">
+            <column name="status" value="Tentative" />
+            <where>status = 'WaitList'</where>
+         </update>
+         <update tableName="patient_appointment_audit">
+            <column name="status" value="Confirmed" />
+            <where>status = 'Scheduled'</where>
+         </update>
+
+        <!-- service default/initial status -->
+         <update tableName="appointment_service">
+            <column name="initial_appointment_status" value="Tentative" />
+            <where>initial_appointment_status = 'WaitList'</where>
+         </update>
+         <update tableName="appointment_service">
+            <column name="initial_appointment_status" value="Confirmed" />
+            <where>initial_appointment_status = 'Scheduled'</where>
+         </update>
+    </changeSet>
 </databaseChangeLog>

@@ -11,7 +11,24 @@ public class AppointmentBookingWindowValidator implements AppointmentValidator {
     
     @Override
     public void validate(Appointment appointment, List<String> errors) {
-        if (appointment == null || appointment.getService() == null || appointment.getStartDateTime() == null || AppointmentStatus.Cancelled.equals(appointment.getStatus())) {
+        if (appointment == null
+                || appointment.getService() == null
+                || AppointmentStatus.Cancelled.equals(appointment.getStatus())) {
+            return;
+        }
+
+        if (appointment.isDateOnlyAppointment()) {
+            if (appointment.getAppointmentDate() == null) {
+                return;
+            }
+            if (!AppointmentBookingRulesUtil.isDateWithinBookingWindow(
+                    appointment.getService(), appointment.getAppointmentDate())) {
+                errors.add("Selected date is outside the allowed booking window.");
+            }
+            return;
+        }
+
+        if (appointment.getStartDateTime() == null) {
             return;
         }
         if (!AppointmentBookingRulesUtil.isAppointmentWithinBookingWindow(appointment)) {

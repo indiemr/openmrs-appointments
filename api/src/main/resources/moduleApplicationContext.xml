@@ -152,6 +152,7 @@
                 <property name="appointmentValidators">
                     <list>
                         <bean class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentValidator"/>
+                        <ref bean="dateOnlyAppointmentValidator"/>
                         <ref bean="appointmentBookingWindowValidator"/>
                         <ref bean="appointmentLeadTimeValidator"/>
                         <ref bean="appointmentCancellationValidator"/>
@@ -162,6 +163,7 @@
                 <property name="editAppointmentValidators">
                     <list>
                         <ref bean="defaultEditAppointmentValidator"/>
+                        <ref bean="dateOnlyAppointmentValidator"/>
                         <ref bean="appointmentBookingWindowValidator"/>
                         <ref bean="appointmentLeadTimeValidator"/>
                         <ref bean="appointmentCancellationValidator"/>
@@ -218,6 +220,7 @@
                 <property name="appointmentValidators">
                     <list>
                         <bean class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentValidator"/>
+                        <ref bean="dateOnlyAppointmentValidator"/>
                         <ref bean="appointmentBookingWindowValidator"/>
                         <ref bean="appointmentLeadTimeValidator"/>
                         <ref bean="appointmentCancellationValidator"/>
@@ -228,6 +231,7 @@
                 <property name="editAppointmentValidators">
                     <list>
                         <ref bean="defaultEditAppointmentValidator"/>
+                        <ref bean="dateOnlyAppointmentValidator"/>
                         <ref bean="appointmentBookingWindowValidator"/>
                         <ref bean="appointmentLeadTimeValidator"/>
                         <ref bean="appointmentCancellationValidator"/>
@@ -430,6 +434,7 @@
     <bean id="appointmentCancellationValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentCancellationValidator"/>
     <bean id="appointmentCancellationStatusChangeValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentCancellationStatusChangeValidator"/>
     <bean id="virtualAppointmentOAuthValidator" class="org.openmrs.module.appointments.validator.impl.VirtualAppointmentOAuthValidator"/>
+    <bean id="dateOnlyAppointmentValidator" class="org.openmrs.module.appointments.validator.impl.DateOnlyAppointmentValidator"/>
 
     <bean parent="serviceContext">
         <property name="moduleService">

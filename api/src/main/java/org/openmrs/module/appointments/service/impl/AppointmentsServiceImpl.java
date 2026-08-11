@@ -27,6 +27,7 @@ import org.openmrs.module.appointments.notification.NotificationResult;
 import org.openmrs.module.appointments.service.AppointmentNumberGenerator;
 import org.openmrs.module.appointments.service.AppointmentNumberGeneratorLocator;
 import org.openmrs.module.appointments.service.AppointmentsService;
+import org.openmrs.module.appointments.util.AppointmentStatusUtil;
 import org.openmrs.module.appointments.validator.AppointmentStatusChangeValidator;
 import org.openmrs.module.appointments.validator.AppointmentValidator;
 import org.springframework.transaction.annotation.Transactional;
@@ -303,7 +304,7 @@ public class AppointmentsServiceImpl implements AppointmentsService {
     }
 
     private boolean isUserAllowedToResetStatus(AppointmentStatus toStatus, AppointmentStatus currentStatus) {
-        if (!toStatus.equals(AppointmentStatus.Scheduled)) return true;
+        if (!AppointmentStatusUtil.isConfirmed(toStatus)) return true;
         if (currentStatus.equals(AppointmentStatus.Requested)) return true;
         return Context.hasPrivilege(RESET_APPOINTMENT_STATUS);
     }
@@ -366,8 +367,15 @@ public class AppointmentsServiceImpl implements AppointmentsService {
     }
 
     private List<Appointment> getNonVoidedFutureAppointments(List<Appointment> appointments) {
+        Date startOfDay = getStartOfDay();
         return appointments.stream().filter(appointment -> {
-            return !(appointment.getVoided() || appointment.getStartDateTime().before(getStartOfDay()));
+            if (appointment.getVoided()) {
+                return false;
+            }
+            if (appointment.isDateOnlyAppointment()) {
+                return appointment.getAppointmentDate() != null && !appointment.getAppointmentDate().before(startOfDay);
+            }
+            return appointment.getStartDateTime() != null && !appointment.getStartDateTime().before(startOfDay);
         }).collect(Collectors.toList());
     }
 
@@ -385,7 +393,7 @@ public class AppointmentsServiceImpl implements AppointmentsService {
         existingProviderInAppointment.setResponse(providerWithNewResponse.getResponse());
 
         if (isFirstAcceptForRequestedAppointment(providerWithNewResponse, appointment)) {
-            changeStatus(appointment, AppointmentStatus.Scheduled.name(), Date.from(Instant.now()));
+            changeStatus(appointment, AppointmentStatus.Confirmed.name(), Date.from(Instant.now()));
         } else {
             appointmentDao.save(appointment);
         }
@@ -435,7 +443,7 @@ public class AppointmentsServiceImpl implements AppointmentsService {
             if (retainAppointmentNumber) {
                 newAppointment.setAppointmentNumber(prevAppointment.getAppointmentNumber());
             }
-            newAppointment.setStatus(AppointmentStatus.Scheduled);
+            newAppointment.setStatus(AppointmentStatus.Confirmed);
             validateAndSave(newAppointment);
 
             return newAppointment;
