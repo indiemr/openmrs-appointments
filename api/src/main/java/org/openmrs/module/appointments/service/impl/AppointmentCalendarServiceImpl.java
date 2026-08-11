@@ -19,6 +19,7 @@ import org.openmrs.module.appointments.model.AppointmentProvider;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.service.AppointmentCalendarService;
 import org.openmrs.module.appointments.util.AppointmentServiceCapacityUtil;
+import org.openmrs.module.appointments.util.AppointmentStatusUtil;
 import org.openmrs.module.indiemroauthprovider.api.TeleconsultService;
 import org.openmrs.module.indiemroauthprovider.dto.CancelCalendarEventRequest;
 import org.openmrs.module.indiemroauthprovider.dto.CreateCalendarEventRequest;
@@ -110,9 +111,19 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
         }
 
         try {
-            UpdateCalendarEventRequest request = buildUpdateRequest(appointment);
-            teleconsultService.updateCalendarEvent(provider, request);
-            log.info("Updated calendar event for appointment " + appointment.getUuid());
+
+            boolean exists = teleconsultService.hasActiveCalendarEvent(
+                provider, OAUTH_PROVIDER_CODE, RESOURCE_TYPE, appointment.getUuid());
+
+            if (exists) {
+                UpdateCalendarEventRequest request = buildUpdateRequest(appointment);
+                teleconsultService.updateCalendarEvent(provider, request);
+                log.info("Updated calendar event for appointment " + appointment.getUuid());
+            } else {
+                // Tentative/date-only → Confirmed timed: first sync
+                createCalendarEventForAppointment(appointmentUuid);
+                log.info("Calendar event is missing, Creating new calendar event on update for appointment " + appointment.getUuid());
+            }
         } catch (Exception e) {
             log.error("Failed to update calendar event for appointment " + appointment.getUuid(), e);
             throw new RuntimeException("Failed to update calendar event for appointment " + appointmentUuid, e);
@@ -126,7 +137,7 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
             throw new IllegalArgumentException("Appointment not found: " + appointmentUuid);
         }
 
-        if (!shouldSyncToCalendar(appointment)) {
+        if (!shouldCancelCalendar(appointment)) {
             return;
         }
 
@@ -142,6 +153,12 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
             return;
         }
 
+        if (!teleconsultService.hasActiveCalendarEvent(
+                provider, OAUTH_PROVIDER_CODE, RESOURCE_TYPE, appointment.getUuid())) {
+            log.info("No calendar event to cancel for appointment " + appointment.getUuid());
+            return;
+        }
+
         try {
             CancelCalendarEventRequest request = buildCancelCalendarEventRequest(appointment);
             teleconsultService.cancelCalendarEvent(provider, request);
@@ -152,13 +169,34 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
         }
     }
 
+    private boolean shouldCancelCalendar(Appointment appointment) {
+        if (!isOAuthProviderModuleStarted() || getTeleconsultService() == null) {
+            return false;
+        }
+        return appointment != null;
+    }
+
     private boolean shouldSyncToCalendar(Appointment appointment) {
         if (!isOAuthProviderModuleStarted() || getTeleconsultService() == null) {
             return false;
         }
-        if (appointment == null || appointment.getStartDateTime() == null) {
+        if (appointment == null) {
             return false;
         }
+    
+        // date-only / tentative → no calendar
+        if (appointment.isDateOnlyAppointment()) {
+            return false;
+        }
+        if (!AppointmentStatusUtil.isConfirmed(appointment.getStatus())) {
+            return false;
+        }
+    
+        // timed confirmed needs a real slot
+        if (appointment.getStartDateTime() == null || appointment.getEndDateTime() == null) {
+            return false;
+        }
+    
         AppointmentKind kind = appointment.getAppointmentKind();
         return AppointmentKind.Virtual.equals(kind) || AppointmentKind.Scheduled.equals(kind);
     }
