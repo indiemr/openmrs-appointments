@@ -117,8 +117,17 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
 
             if (exists) {
                 UpdateCalendarEventRequest request = buildUpdateRequest(appointment);
-                teleconsultService.updateCalendarEvent(provider, request);
-                log.info("Updated calendar event for appointment " + appointment.getUuid());
+                CreateCalendarEventResponse response = teleconsultService.updateCalendarEvent(provider, request);
+                if (isVirtual(appointment)
+                        && response != null
+                        && StringUtils.isNotBlank(response.getMeetingUrl())
+                        && !response.getMeetingUrl().equals(appointment.getTeleHealthVideoLink())) {
+                    appointment.setTeleHealthVideoLink(response.getMeetingUrl());
+                    appointmentDao.save(appointment);
+                }
+                log.info("Updated calendar event for appointment " + appointment.getUuid()
+                    + (response != null && StringUtils.isNotBlank(response.getMeetingUrl())
+                        ? " with meet link" : ""));
             } else {
                 // Tentative/date-only → Confirmed timed: first sync
                 createCalendarEventForAppointment(appointmentUuid);
@@ -232,6 +241,8 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
         request.setStart(appointment.getStartDateTime());
         request.setEnd(AppointmentServiceCapacityUtil.resolveAppointmentEndDateTime(appointment));
         request.setTimeZone(resolveTimeZone());
+        request.setCreateMeet(isVirtual(appointment));
+        request.setMintJoinLink(isVirtual(appointment));
         return request;
     }
 
