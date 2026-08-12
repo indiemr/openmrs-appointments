@@ -20,6 +20,7 @@ import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.service.AppointmentCalendarService;
 import org.openmrs.module.appointments.util.AppointmentServiceCapacityUtil;
 import org.openmrs.module.appointments.util.AppointmentStatusUtil;
+import org.openmrs.module.indiemroauthprovider.api.ExternalResourceService;
 import org.openmrs.module.indiemroauthprovider.api.TeleconsultService;
 import org.openmrs.module.indiemroauthprovider.dto.CancelCalendarEventRequest;
 import org.openmrs.module.indiemroauthprovider.dto.CreateCalendarEventRequest;
@@ -95,6 +96,20 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
         }
         
         if (!shouldSyncToCalendar(appointment)) {
+             // e.g. rescheduled to date-only / no longer confirmed
+            // cancel only if events exist — cancelAll is safe when none exist
+            try {
+                cancelAllCalendarEventsForAppointment(appointmentUuid);
+                if (StringUtils.isNotBlank(appointment.getTeleHealthVideoLink())) {
+                    appointment.setTeleHealthVideoLink(null);
+                    appointmentDao.save(appointment);
+                }
+                log.info("Stopped calendar sync for appointment " + appointmentUuid
+                        + " (date-only or not confirmed); cancelled existing events if any");
+            } catch (Exception e) {
+                log.warn("Failed to cancel calendar events after sync became ineligible for "
+                        + appointmentUuid, e);
+            }
             return;
         }
 
@@ -112,14 +127,32 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
 
         try {
 
-            boolean exists = teleconsultService.hasActiveCalendarEvent(
+            boolean calendarEventExistsForCurrentProvider = teleconsultService.hasActiveCalendarEvent(
                 provider, OAUTH_PROVIDER_CODE, RESOURCE_TYPE, appointment.getUuid());
 
-            if (exists) {
+            if (calendarEventExistsForCurrentProvider) {
                 UpdateCalendarEventRequest request = buildUpdateRequest(appointment);
-                teleconsultService.updateCalendarEvent(provider, request);
-                log.info("Updated calendar event for appointment " + appointment.getUuid());
+                CreateCalendarEventResponse response = teleconsultService.updateCalendarEvent(provider, request);
+                if (isVirtual(appointment)
+                        && response != null
+                        && StringUtils.isNotBlank(response.getMeetingUrl())
+                        && !response.getMeetingUrl().equals(appointment.getTeleHealthVideoLink())) {
+                    appointment.setTeleHealthVideoLink(response.getMeetingUrl());
+                    appointmentDao.save(appointment);
+                }
+                log.info("Updated calendar event for appointment " + appointment.getUuid()
+                    + (response != null && StringUtils.isNotBlank(response.getMeetingUrl())
+                        ? " with meet link" : ""));
             } else {
+                 // no event for current provider → clear any other provider's events, then create
+                cancelAllCalendarEventsForAppointment(appointment.getUuid());
+
+                // clear stale meet link before recreate
+                if (StringUtils.isNotBlank(appointment.getTeleHealthVideoLink())) {
+                    appointment.setTeleHealthVideoLink(null);
+                    appointmentDao.save(appointment);
+                }
+                
                 // Tentative/date-only → Confirmed timed: first sync
                 createCalendarEventForAppointment(appointmentUuid);
                 log.info("Calendar event is missing, Creating new calendar event on update for appointment " + appointment.getUuid());
@@ -232,6 +265,8 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
         request.setStart(appointment.getStartDateTime());
         request.setEnd(AppointmentServiceCapacityUtil.resolveAppointmentEndDateTime(appointment));
         request.setTimeZone(resolveTimeZone());
+        request.setCreateMeet(isVirtual(appointment));
+        request.setMintJoinLink(isVirtual(appointment));
         return request;
     }
 
@@ -336,6 +371,37 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
             log.warn("Unable to resolve TeleconsultService from " + OAUTH_PROVIDER_MODULE_ID, e);
             return null;
         }
+    }
+
+    private ExternalResourceService getExternalResourceService() {
+        Module module = ModuleFactory.getModuleById(OAUTH_PROVIDER_MODULE_ID);
+        if (module == null || !module.isStarted()) {
+            return null;
+        }
+        try {
+            Class<?> serviceClass = ModuleFactory.getModuleClassLoader(module)
+                    .loadClass("org.openmrs.module.indiemroauthprovider.api.ExternalResourceService");
+            return (ExternalResourceService) Context.getService(serviceClass);
+        } catch (ClassCastException e) {
+            log.warn("ExternalResourceService classloader mismatch; ensure indiemroauthprovider-api is not bundled in appointments lib/", e);
+            return null;
+        } catch (Exception e) {
+            if (e.getClass().getSimpleName().contains("ServiceNotFound")) {
+                log.warn("ExternalResourceService is not registered in OpenMRS context", e);
+                return null;
+            }
+            log.warn("Unable to resolve ExternalResourceService from " + OAUTH_PROVIDER_MODULE_ID, e);
+            return null;
+        }
+    }
+    
+    private void cancelAllCalendarEventsForAppointment(String appointmentUuid) throws Exception {
+        ExternalResourceService externalResourceService = getExternalResourceService();
+        if (externalResourceService == null) {
+            log.warn("Skipping cancel-all calendar events: ExternalResourceService not available for " + appointmentUuid);
+            return;
+        }
+        externalResourceService.cancelAppointmentResources(appointmentUuid);
     }
 
     private String resolveTimeZone() {
