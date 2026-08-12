@@ -96,6 +96,20 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
         }
         
         if (!shouldSyncToCalendar(appointment)) {
+             // e.g. rescheduled to date-only / no longer confirmed
+            // cancel only if events exist — cancelAll is safe when none exist
+            try {
+                cancelAllCalendarEventsForAppointment(appointmentUuid);
+                if (StringUtils.isNotBlank(appointment.getTeleHealthVideoLink())) {
+                    appointment.setTeleHealthVideoLink(null);
+                    appointmentDao.save(appointment);
+                }
+                log.info("Stopped calendar sync for appointment " + appointmentUuid
+                        + " (date-only or not confirmed); cancelled existing events if any");
+            } catch (Exception e) {
+                log.warn("Failed to cancel calendar events after sync became ineligible for "
+                        + appointmentUuid, e);
+            }
             return;
         }
 
