@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+# packages:read - indiemroauthprovider-api, sms-api and billing-api are resolved from
+# GitHub Packages. Public packages still require an authenticated request.
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The OMOD compiles at source/target 1.8 (root pom, maven-compiler-plugin).
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+
+      # ./mvnw pins Maven 3.8.4 so CI and local builds use the same Maven.
+      # skipITs: the 17 *IT.java files behind the activeByDefault failsafe profile have never
+      # run in CI. Excluded to establish a green baseline; enabling them is a separate change.
+      - name: Build and test
+        run: ./mvnw -B --no-transfer-progress -s .github/maven-settings.xml clean verify -DskipITs
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

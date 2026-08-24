@@ -320,27 +320,18 @@
 					<updatePolicy>interval:10080</updatePolicy>
 				</snapshots>
 			</repository>
+			<!-- GitHub Packages resolves org-wide: the repo segment of the URL is ignored, so this
+			     one entry serves every indiemr package (appointments, indiemroauthprovider-api,
+			     billing-api, sms-api). Reading it requires authentication even though the packages
+			     are public - CI uses .github/maven-settings.xml, local builds need a ~/.m2 server
+			     entry with the same id. -->
 			<repository>
 				<id>github-indiemr-appointments</id>
 				<url>https://maven.pkg.github.com/indiemr/openmrs-appointments</url>
 				<snapshots>
-				  <enabled>true</enabled>
-				</snapshots>
-			  </repository>
-			<repository>
-				<id>github-indiemr-oauth-provider</id>
-				<url>https://maven.pkg.github.com/indiemr/indiemroauthprovider</url>
-				<snapshots>
 					<enabled>true</enabled>
 				</snapshots>
 			</repository>
-			<repository>
-				<id>github-indiemr-billing</id>
-				<url>https://maven.pkg.github.com/indiemr/openmrs-module-billing</url>
-				<snapshots>
-				  <enabled>true</enabled>
-				</snapshots>
-			  </repository>
 		</repositories>
 
 	<pluginRepositories>
