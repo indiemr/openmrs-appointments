@@ -1,0 +1,39 @@
+[
+    {
+        "name": "datafilter_locationBasedAppointmentFilter",
+        "targetClasses": ["org.openmrs.module.appointments.model.Appointment"],
+        "condition": "patient_id IN (
+                        SELECT DISTINCT datafilter_ebm.entity_identifier FROM datafilter_entity_basis_map datafilter_ebm
+                            WHERE datafilter_ebm.entity_type = 'org.openmrs.Patient'
+                            AND datafilter_ebm.basis_type = 'org.openmrs.Location'
+                            AND datafilter_ebm.basis_identifier IN (:basisIds))",
+        "parameters": [
+            {
+                "name": "basisIds",
+                "type": "string"
+            }
+        ]
+    },
+    {
+        "name": "datafilter_locationBasedAppointmentServiceFilter",
+        "targetClasses": ["org.openmrs.module.appointments.model.AppointmentServiceDefinition"],
+        "condition": "location_id IN (:basisIds)",
+        "parameters": [
+            {
+                "name": "basisIds",
+                "type": "string"
+            }
+        ]
+    },
+    {
+        "name": "datafilter_locationBasedAppointmentUnavailabilityFilter",
+        "targetClasses": ["org.openmrs.module.appointments.model.AppointmentUnavailability"],
+        "condition": "location_id IN (:basisIds)",
+        "parameters": [
+            {
+                "name": "basisIds",
+                "type": "string"
+            }
+        ]
+    }
+]

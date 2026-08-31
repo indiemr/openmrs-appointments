@@ -66,6 +66,7 @@
 
     <bean id="defaultAppointmentStatusChangeValidator" class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentStatusChangeValidator"/>
     <bean id="defaultAppointmentValidator" class="org.openmrs.module.appointments.validator.impl.DefaultAppointmentValidator"/>
+    <bean id="appointmentLocationEntitlementValidator" class="org.openmrs.module.appointments.validator.impl.AppointmentLocationEntitlementValidator"/>
 
     <bean id="specialityService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
         <property name="transactionManager">
@@ -158,6 +159,7 @@
                         <ref bean="appointmentCancellationValidator"/>
                         <ref bean="appointmentSlotCapacityValidator"/>
                         <ref bean="virtualAppointmentOAuthValidator"/>
+                        <ref bean="appointmentLocationEntitlementValidator"/>
                     </list>
                 </property>
                 <property name="editAppointmentValidators">
@@ -169,6 +171,7 @@
                         <ref bean="appointmentCancellationValidator"/>
                         <ref bean="appointmentSlotCapacityValidator"/>
                         <ref bean="virtualAppointmentOAuthValidator"/>
+                        <ref bean="appointmentLocationEntitlementValidator"/>
                     </list>
                 </property>
                 <property name="appointmentServiceHelper">
@@ -226,6 +229,7 @@
                         <ref bean="appointmentCancellationValidator"/>
                         <ref bean="appointmentSlotCapacityValidator"/>
                         <ref bean="virtualAppointmentOAuthValidator"/>
+                        <ref bean="appointmentLocationEntitlementValidator"/>
                     </list>
                 </property>
                 <property name="editAppointmentValidators">
@@ -237,6 +241,7 @@
                         <ref bean="appointmentCancellationValidator"/>
                         <ref bean="appointmentSlotCapacityValidator"/>
                         <ref bean="virtualAppointmentOAuthValidator"/>
+                        <ref bean="appointmentLocationEntitlementValidator"/>
                     </list>
                 </property>
                 <property name="appointmentDao">
