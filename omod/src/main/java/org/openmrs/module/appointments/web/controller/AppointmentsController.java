@@ -54,7 +54,9 @@ public class AppointmentsController extends BaseRestController {
     public ResponseEntity<AppointmentDefaultResponse> getAppointmentByUuid(@PathVariable(value = "uuid") String uuid)  {
         Appointment appointment = appointmentsService.getAppointmentByUuid(uuid);
         if (appointment == null) {
-            log.error("Could not identify appointment with uuid:" + uuid);
+            // A uuid that resolves to nothing is a routine denial, not a server fault, so it must
+            // not fill the log with ERRORs.
+            log.warn("Could not identify appointment with uuid:" + uuid);
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         return new ResponseEntity<>(appointmentMapper.constructResponse(appointment), HttpStatus.OK);

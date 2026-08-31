@@ -4,6 +4,7 @@ import org.apache.commons.lang.time.DateUtils;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import static org.junit.Assert.assertNull;
 import org.junit.rules.ExpectedException;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -27,6 +28,7 @@ import java.util.function.Supplier;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
@@ -188,11 +190,31 @@ public class AppointmentControllerTest {
     }
 
     @Test
-    public void shouldThrowExceptionIfAppointmentDoesNotExist() throws Exception {
+    public void shouldReturnNotFoundWhenAppointmentDoesNotExist() throws Exception {
+        // A uuid that resolves to nothing must be a clean 404: throwing turned every miss into
+        // a 500 with a stack trace.
         when(appointmentsService.getAppointmentByUuid(any(String.class))).thenReturn(null);
-        expectedException.expect(RuntimeException.class);
-        expectedException.expectMessage("Appointment does not exist");
-        appointmentController.getAppointmentByUuid("randomUuid");
+
+        ResponseEntity<AppointmentDefaultResponse> response =
+                appointmentController.getAppointmentByUuid("randomUuid");
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNull(response.getBody());
+    }
+
+    @Test
+    public void shouldReturnOkWithBodyWhenAppointmentExists() throws Exception {
+        Appointment appointment = new Appointment();
+        appointment.setUuid("appointmentUuid");
+        AppointmentDefaultResponse mapped = new AppointmentDefaultResponse();
+        when(appointmentsService.getAppointmentByUuid("appointmentUuid")).thenReturn(appointment);
+        when(appointmentMapper.constructResponse(appointment)).thenReturn(mapped);
+
+        ResponseEntity<AppointmentDefaultResponse> response =
+                appointmentController.getAppointmentByUuid("appointmentUuid");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(mapped, response.getBody());
     }
 
     @Test
@@ -331,5 +353,20 @@ public class AppointmentControllerTest {
         appointmentController.saveAppointment(appointmentRequest);
         //Mockito.verify(appointmentMapper, times(1)).fromRequest(appointmentRequest);
         Mockito.verify(appointmentsService, times(1)).validateAndSave(any(Supplier.class));
+    }
+
+    @Test
+    public void shouldReturnEmptyWhenTheServiceTypeUuidResolvesToNothing() {
+        // The service-type lookup carries no location predicate, so an unknown uuid arrives here as
+        // null. Passing null into the query is what the guard prevents.
+        String unknownUuid = "no-such-service-type";
+        when(appointmentServiceDefinitionService.getAppointmentServiceTypeByUuid(unknownUuid)).thenReturn(null);
+
+        List<AppointmentDefaultResponse> responses =
+            appointmentController.getAllFututreAppointmentsForGivenServiceType(unknownUuid);
+
+        assertTrue("an unresolvable service type must not reach the appointment query",
+            responses.isEmpty());
+        verify(appointmentsService, never()).getAllFutureAppointmentsForServiceType(any());
     }
 }

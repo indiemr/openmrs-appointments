@@ -12,6 +12,7 @@ import org.openmrs.Concept;
 import org.openmrs.ConceptDatatype;
 import org.openmrs.ConceptName;
 import org.openmrs.Location;
+import org.openmrs.api.APIException;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
@@ -61,6 +62,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -972,5 +974,107 @@ public class AppointmentMapperTest {
         expectedException.expectMessage("Bad Request. No concept found with UUID: invalidConceptUuid");
 
         appointmentMapper.fromRequest(appointmentRequest);
+    }
+
+    @Test
+    public void shouldRetainStoredLocationWhenEditPayloadOmitsIt() throws ParseException {
+        // Edit payloads that omit locationUuid used to blank the stored location, which kills
+        // its billing/calendar/SMS side effects.
+        AppointmentRequest appointmentRequest = createAppointmentRequest();
+        appointmentRequest.setLocationUuid(null);
+
+        String appointmentUuid = "7869637c-12fe-4121-9692-b01f93f99e55";
+        Appointment existingAppointment = createAppointment();
+        existingAppointment.setUuid(appointmentUuid);
+        Location storedLocation = new Location();
+        existingAppointment.setLocation(storedLocation);
+        appointmentRequest.setUuid(appointmentUuid);
+        when(appointmentsService.getAppointmentByUuid(appointmentUuid)).thenReturn(existingAppointment);
+
+        Appointment appointment = appointmentMapper.fromRequest(appointmentRequest);
+
+        assertNotNull(appointment.getLocation());
+        assertEquals(storedLocation, appointment.getLocation());
+    }
+
+    @Test
+    public void shouldRetainOriginalScheduledDateWhenEditPayloadOmitsIt() throws ParseException {
+        AppointmentRequest appointmentRequest = createAppointmentRequest();
+        appointmentRequest.setDateAppointmentScheduled(null);
+
+        String appointmentUuid = "7869637c-12fe-4121-9692-b01f93f99e55";
+        Appointment existingAppointment = createAppointment();
+        existingAppointment.setUuid(appointmentUuid);
+        Date originallyScheduled = DateUtil.convertToDate("2017-01-01T10:00:00.0Z", DateUtil.DateFormatType.UTC);
+        existingAppointment.setDateAppointmentScheduled(originallyScheduled);
+        appointmentRequest.setUuid(appointmentUuid);
+        when(appointmentsService.getAppointmentByUuid(appointmentUuid)).thenReturn(existingAppointment);
+
+        Appointment appointment = appointmentMapper.fromRequest(appointmentRequest);
+
+        assertEquals(originallyScheduled, appointment.getDateAppointmentScheduled());
+    }
+
+    @Test
+    public void shouldStampScheduledDateOnCreateWhenPayloadOmitsIt() throws ParseException {
+        AppointmentRequest appointmentRequest = createAppointmentRequest();
+        appointmentRequest.setDateAppointmentScheduled(null);
+        appointmentRequest.setUuid(null);
+
+        Appointment appointment = appointmentMapper.fromRequest(appointmentRequest);
+
+        assertNotNull(appointment.getDateAppointmentScheduled());
+    }
+
+    @Test
+    public void shouldFailClearlyWhenTheAppointmentForTheGivenUuidCannotBeResolved() throws ParseException {
+        // An unknown uuid returns null here, which previously NPEd inside the mapping below.
+        AppointmentRequest appointmentRequest = createAppointmentRequest();
+        String appointmentUuid = "not-visible-to-this-user";
+        appointmentRequest.setUuid(appointmentUuid);
+        when(appointmentsService.getAppointmentByUuid(appointmentUuid)).thenReturn(null);
+
+        try {
+            appointmentMapper.fromRequest(appointmentRequest);
+            fail("Expected a clear failure rather than a NullPointerException");
+        } catch (APIException e) {
+            assertEquals("No appointment found with uuid: " + appointmentUuid, e.getMessage());
+        }
+    }
+
+    @Test
+    public void shouldRejectAnAppointmentWhoseLocationUuidResolvesToNothing() throws ParseException {
+        // An unknown location uuid resolves to null. Assigning it would persist an appointment
+        // with its billing, calendar and SMS side effects dead.
+        AppointmentRequest appointmentRequest = createAppointmentRequest();
+        appointmentRequest.setLocationUuid("location-in-another-workspace");
+        when(locationService.getLocationByUuid("location-in-another-workspace")).thenReturn(null);
+
+        try {
+            appointmentMapper.fromRequest(appointmentRequest);
+            fail("Expected a clear rejection rather than an appointment with no location");
+        } catch (APIException e) {
+            assertEquals("Invalid location or location not found", e.getMessage());
+        }
+    }
+
+    @Test
+    public void shouldFailClearlyWhenTheServiceCannotBeResolvedAndAServiceTypeWasRequested() throws ParseException {
+        // An unknown service uuid resolves to null, and the service-type lookup below used to
+        // dereference it. That NPE surfaced as HTTP 500 on /appointments/conflicts and as a
+        // stack-trace 400 on save, because an NPE is not an APIException and so skipped the
+        // WARN branch the other denials use.
+        AppointmentRequest appointmentRequest = createAppointmentRequest();
+        appointmentRequest.setServiceUuid("service-in-another-workspace");
+        appointmentRequest.setServiceTypeUuid("serviceTypeUuid");
+        when(appointmentServiceDefinitionService.getAppointmentServiceByUuid("service-in-another-workspace"))
+                .thenReturn(null);
+
+        try {
+            appointmentMapper.fromRequest(appointmentRequest);
+            fail("Expected a clear failure rather than a NullPointerException");
+        } catch (APIException e) {
+            assertEquals("Invalid service or service not found", e.getMessage());
+        }
     }
 }

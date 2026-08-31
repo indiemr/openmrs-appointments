@@ -8,6 +8,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.openmrs.Location;
 import org.openmrs.User;
+import org.openmrs.api.APIException;
 import org.openmrs.api.LocationService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
@@ -580,6 +581,10 @@ public class AppointmentServiceDefinitionMapperTest {
         speciality = new Speciality();
         speciality.setUuid("specUuid");
         appointmentServiceDescription.setLocationUuid("locUuid");
+        // Stub the lookup the payload's location uuid implies. Without it the mapper sees a declared
+        // location that resolves to nothing, which is now rejected rather than silently assigned as
+        // null.
+        when(locationService.getLocationByUuid("locUuid")).thenReturn(location);
         appointmentServiceDescription.setSpecialityUuid("specUuid");
         appointmentServiceDescription.setDescription("OPD ward for cardiology");
         appointmentServiceDescription.setMaxAppointmentsPerSlot(2);
@@ -598,4 +603,39 @@ public class AppointmentServiceDefinitionMapperTest {
         return availabilityPayload;
     }
 
+    @Test
+    public void shouldRejectAServiceWhoseLocationUuidResolvesToNothing() {
+        // An unknown location uuid resolves to null. Assigning it would blank the service's
+        // location instead of rejecting a bad request.
+        AppointmentServiceDescription payload = createAppointmentServicePayload();
+        payload.setLocationUuid("location-in-another-workspace");
+        when(locationService.getLocationByUuid("location-in-another-workspace")).thenReturn(null);
+
+        try {
+            appointmentServiceMapper.fromDescription(payload);
+            fail("Expected a clear rejection rather than a service with no location");
+        } catch (APIException e) {
+            assertEquals("Invalid location or location not found", e.getMessage());
+        }
+    }
+
+    @Test
+    public void shouldKeepTheStoredLocationWhenAnEditOmitsIt() {
+        // The mapper is a full replace and also serves edits, so an unconditional assignment blanked
+        // the location of any service edited with a minimal payload.
+        // createAppointmentServicePayload() reassigns the shared `location` field, so build the
+        // payload before wiring the stored location or they end up being different objects.
+        AppointmentServiceDescription payload = createAppointmentServicePayload();
+        payload.setUuid("Uuid");
+        payload.setLocationUuid(null);
+        AppointmentServiceDefinition existing = new AppointmentServiceDefinition();
+        existing.setUuid("Uuid");
+        existing.setLocation(location);
+        when(appointmentServiceDefinitionService.getAppointmentServiceByUuid("Uuid")).thenReturn(existing);
+
+        AppointmentServiceDefinition updated = appointmentServiceMapper.fromDescription(payload);
+
+        assertEquals("an edit omitting locationUuid must not blank the stored location",
+            location, updated.getLocation());
+    }
 }

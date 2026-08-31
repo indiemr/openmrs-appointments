@@ -254,12 +254,28 @@ public class RecurringAppointmentsControllerTest {
     }
 
     @Test
-    public void shouldThrowExceptionIfAppointmentDoesNotExist() {
+    public void shouldReturnNotFoundWhenRecurringAppointmentDoesNotExist() {
+        // Same contract as the singular route: a uuid that resolves to nothing is a 404,
+        // never a 500.
         when(appointmentsService.getAppointmentByUuid(any(String.class))).thenReturn(null);
-        expectedException.expect(RuntimeException.class);
-        expectedException.expectMessage("Appointment does not exist");
 
-        recurringAppointmentsController.getAppointmentByUuid("randomUuid");
+        ResponseEntity<RecurringAppointmentDefaultResponse> response =
+                recurringAppointmentsController.getAppointmentByUuid("randomUuid");
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNull(response.getBody());
+    }
+
+    @Test
+    public void shouldReturnOkWhenRecurringAppointmentExists() {
+        Appointment appointment = new Appointment();
+        appointment.setUuid("appointment");
+        when(appointmentsService.getAppointmentByUuid("appointment")).thenReturn(appointment);
+
+        ResponseEntity<RecurringAppointmentDefaultResponse> response =
+                recurringAppointmentsController.getAppointmentByUuid("appointment");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
     @Test
