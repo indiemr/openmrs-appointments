@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE hibernate-mapping PUBLIC
         "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
-        "https://hibernate.org/dtd/hibernate-mapping-3.0.dtd" >
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd" >
 <hibernate-mapping package="org.openmrs.module.appointments.model">
     <class name="AppointmentServiceAttributeType" table="appointment_service_attribute_type" batch-size="50">
         <id name="appointmentServiceAttributeTypeId" type="java.lang.Integer" column="appointment_service_attribute_type_id">
