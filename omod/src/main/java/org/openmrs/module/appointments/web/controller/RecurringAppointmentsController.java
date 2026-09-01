@@ -148,13 +148,15 @@ public class RecurringAppointmentsController extends BaseRestController {
 
     @RequestMapping(method = RequestMethod.GET)
     @ResponseBody
-    public RecurringAppointmentDefaultResponse getAppointmentByUuid(@RequestParam(value = "uuid") String uuid) {
+    public ResponseEntity<RecurringAppointmentDefaultResponse> getAppointmentByUuid(@RequestParam(value = "uuid") String uuid) {
         Appointment appointment = appointmentsService.getAppointmentByUuid(uuid);
         if (appointment == null) {
-            log.error("Invalid. Appointment does not exist. UUID - " + uuid);
-            throw new RuntimeException("Appointment does not exist");
+            // A uuid that resolves to nothing is a 404, not a fault. Throwing turned every miss
+            // into a 500 with a stack trace.
+            log.warn("Could not identify appointment with uuid:" + uuid);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        return recurringAppointmentMapper.constructResponse(appointment);
+        return new ResponseEntity<>(recurringAppointmentMapper.constructResponse(appointment), HttpStatus.OK);
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/conflicts")

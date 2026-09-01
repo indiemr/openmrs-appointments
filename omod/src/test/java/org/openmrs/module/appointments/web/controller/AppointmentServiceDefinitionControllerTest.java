@@ -5,6 +5,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.InjectMocks;
+import org.openmrs.module.appointments.service.AppointmentSlotAvailabilityService;
+import org.openmrs.module.appointments.web.contract.AppointmentSlotAvailabilityResponse;
+import org.openmrs.module.appointments.web.mapper.AppointmentSlotAvailabilityMapper;
 import org.mockito.Mock;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.service.AppointmentServiceDefinitionService;
@@ -36,6 +39,12 @@ public class AppointmentServiceDefinitionControllerTest {
 
     @Mock
     private AppointmentServiceMapper appointmentServiceMapper;
+
+    @Mock
+    private AppointmentSlotAvailabilityService appointmentSlotAvailabilityService;
+
+    @Mock
+    private AppointmentSlotAvailabilityMapper appointmentSlotAvailabilityMapper;
 
     @InjectMocks
     private AppointmentServiceController appointmentServiceController;
@@ -112,14 +121,19 @@ public class AppointmentServiceDefinitionControllerTest {
         appointmentServiceDefinition.setUuid(uuid);
         when(appointmentServiceDefinitionService.getAppointmentServiceByUuid(uuid)).thenReturn(appointmentServiceDefinition);
         
-        appointmentServiceController.getAppointmentServiceByUuid(uuid);
+        ResponseEntity<Object> response = appointmentServiceController.getAppointmentServiceByUuid(uuid);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(appointmentServiceDefinitionService, times(1)).getAppointmentServiceByUuid(uuid);
         verify(appointmentServiceMapper, times(1)).constructResponse(appointmentServiceDefinition);
     }
     
-    @Test(expected = RuntimeException.class)
-    public void shouldThrowExceptionIfServiceNotFound() throws Exception {
-        appointmentServiceController.getAppointmentServiceByUuid("random");
+    @Test
+    public void shouldReturnNotFoundIfServiceNotFound() throws Exception {
+        // An unknown uuid resolves to null. This used to throw, which BaseRestController turned
+        // into HTTP 500 plus a stack trace on every such request.
+        ResponseEntity<Object> response = appointmentServiceController.getAppointmentServiceByUuid("random");
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNull(response.getBody());
         verify(appointmentServiceDefinitionService, times(1)).getAppointmentServiceByUuid("random");
     }
 
@@ -214,6 +228,31 @@ public class AppointmentServiceDefinitionControllerTest {
         List<AppointmentServiceFullResponse> allAppointmentServicesWithTypes = appointmentServiceController.getAllAppointmentServicesWithTypes();
         verify(appointmentServiceDefinitionService, times(1)).getAllAppointmentServices(false);
         verify(appointmentServiceMapper, times(1)).constructFullResponseForServiceList(appointmentServiceDefinitionList);
+    }
+
+    @Test
+    public void shouldReturnNotFoundForAvailableSlotsWhenServiceIsUnknown() throws Exception {
+        // An unknown service uuid resolves to null. There was no null guard at all, so the
+        // request failed with a 500 from deeper in the stack; it must be a clean 404.
+        when(appointmentServiceDefinitionService.getAppointmentServiceByUuid("unknownUuid")).thenReturn(null);
+
+        ResponseEntity<List<AppointmentSlotAvailabilityResponse>> response =
+                appointmentServiceController.getAvailableSlots("unknownUuid", "2029-03-17", null, null);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNull(response.getBody());
+    }
+
+    @Test
+    public void shouldReturnOkForAvailableSlotsWhenServiceIsKnown() throws Exception {
+        AppointmentServiceDefinition service = new AppointmentServiceDefinition();
+        service.setUuid("knownUuid");
+        when(appointmentServiceDefinitionService.getAppointmentServiceByUuid("knownUuid")).thenReturn(service);
+
+        ResponseEntity<List<AppointmentSlotAvailabilityResponse>> response =
+                appointmentServiceController.getAvailableSlots("knownUuid", "2029-03-17", null, null);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
     @Test

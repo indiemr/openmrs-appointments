@@ -51,17 +51,24 @@ public class AppointmentServiceController extends BaseRestController {
 
     @RequestMapping(method = RequestMethod.GET, value = "availableSlots")
     @ResponseBody
-    public List<AppointmentSlotAvailabilityResponse> getAvailableSlots
-        (@RequestParam("uuid") String serviceUuid, 
+    public ResponseEntity<List<AppointmentSlotAvailabilityResponse>> getAvailableSlots
+        (@RequestParam("uuid") String serviceUuid,
         @RequestParam("date") String date,
         @RequestParam(value = "excludeAppointmentUuid", required = false) String excludeAppointmentUuid,
-        @RequestParam(value = "patientUuid", required = false) String patientUuid) 
-        throws ParseException {
+        @RequestParam(value = "patientUuid", required = false) String patientUuid) throws ParseException {
+        // There was no null guard at all: an unknown service uuid resolved to null and the
+        // request failed with a 500 from deeper in the stack.
+        AppointmentServiceDefinition appointmentServiceDefinition =
+                appointmentServiceDefinitionService.getAppointmentServiceByUuid(serviceUuid);
+        if (appointmentServiceDefinition == null) {
+            log.warn("Could not identify appointment service with uuid:" + serviceUuid);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         Date appointmentDate = dateFormat.parse(date);
-        return appointmentSlotAvailabilityMapper.constructResponse(
+        return new ResponseEntity<>(appointmentSlotAvailabilityMapper.constructResponse(
                 appointmentSlotAvailabilityService.getAvailableSlots(serviceUuid, appointmentDate, excludeAppointmentUuid, patientUuid)
-        );
+        ), HttpStatus.OK);
     }
     
 
@@ -83,14 +90,16 @@ public class AppointmentServiceController extends BaseRestController {
 
     @RequestMapping(method = RequestMethod.GET)
     @ResponseBody
-    public AppointmentServiceFullResponse getAppointmentServiceByUuid(@RequestParam("uuid") String uuid)  {
+    public ResponseEntity<Object> getAppointmentServiceByUuid(@RequestParam("uuid") String uuid)  {
         AppointmentServiceDefinition appointmentServiceDefinition = appointmentServiceDefinitionService.getAppointmentServiceByUuid(uuid);
         if(appointmentServiceDefinition == null){
-            throw new RuntimeException("Appointment Service does not exist");
+            // Throwing produced HTTP 500 plus a full stack trace on every unknown uuid.
+            log.warn("No appointment service found with uuid: " + uuid);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         AppointmentServiceFullResponse appointmentServiceFullResponse = appointmentServiceMapper.constructResponse(appointmentServiceDefinition);
 
-        return appointmentServiceFullResponse;
+        return new ResponseEntity<>(appointmentServiceFullResponse, HttpStatus.OK);
     }
 
     @RequestMapping(method = RequestMethod.GET, value = "search")

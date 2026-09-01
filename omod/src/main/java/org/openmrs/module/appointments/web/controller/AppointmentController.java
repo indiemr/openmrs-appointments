@@ -2,6 +2,7 @@ package org.openmrs.module.appointments.web.controller;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.api.APIException;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.model.AppointmentServiceType;
@@ -80,6 +81,12 @@ public class AppointmentController extends BaseRestController {
              */
             Appointment appointment = appointmentsService.validateAndSave(() -> appointmentMapper.fromRequest(appointmentRequest));
             return new ResponseEntity<>(appointmentMapper.constructResponse(appointment), HttpStatus.OK);
+        } catch (APIException e) {
+            // Rejected input, not a server fault: an unknown uuid or a missing location. Logged at
+            // WARN and without the throwable, because passing `e` still prints a full stack trace
+            // at any level.
+            log.warn("Could not save appointment: " + e.getMessage());
+            return new ResponseEntity<>(RestUtil.wrapErrorResponse(e, e.getMessage()), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             log.error("Runtime error while trying to create new appointment", e);
             return new ResponseEntity<>(RestUtil.wrapErrorResponse(e, e.getMessage()), HttpStatus.BAD_REQUEST);
@@ -91,6 +98,12 @@ public class AppointmentController extends BaseRestController {
     @ResponseBody
     public List<AppointmentDefaultResponse> getAllFututreAppointmentsForGivenServiceType(@RequestParam(value = "appointmentServiceTypeUuid", required = true) String serviceTypeUuid) {
         AppointmentServiceType appointmentServiceType = appointmentServiceDefinitionService.getAppointmentServiceTypeByUuid(serviceTypeUuid);
+        if (appointmentServiceType == null) {
+            // The service-type lookup carries no location predicate, so an unknown uuid reaches here
+            // as null. Returning an empty list keeps this consistent with the other routes rather
+            // than letting a null argument reach the query.
+            return Collections.emptyList();
+        }
         List<Appointment> appointments = appointmentsService.getAllFutureAppointmentsForServiceType(appointmentServiceType);
         return appointmentMapper.constructResponse(appointments);
     }
@@ -154,13 +167,17 @@ public class AppointmentController extends BaseRestController {
 
     @RequestMapping(method = RequestMethod.GET)
     @ResponseBody
-    public AppointmentDefaultResponse getAppointmentByUuid(@RequestParam(value = "uuid") String uuid)  {
+    public ResponseEntity<AppointmentDefaultResponse> getAppointmentByUuid(@RequestParam(value = "uuid") String uuid)  {
         Appointment appointment = appointmentsService.getAppointmentByUuid(uuid);
         if(appointment == null) {
-            log.error("Invalid. Appointment does not exist. UUID - " + uuid);
-            throw new RuntimeException("Appointment does not exist");
+            // This route threw on a miss, so an unknown uuid came back 500 with a full stack
+            // trace, while the sibling /appointments/{uuid} already answered 404. Aligning the
+            // two. Absent and not-visible are deliberately one case: telling them apart would
+            // disclose that the appointment exists somewhere else.
+            log.warn("Could not identify appointment with uuid:" + uuid);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        return appointmentMapper.constructResponse(appointment);
+        return new ResponseEntity<>(appointmentMapper.constructResponse(appointment), HttpStatus.OK);
     }
 
     @RequestMapping(method = RequestMethod.POST, value="/{appointmentUuid}/providerResponse")
