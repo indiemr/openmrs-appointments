@@ -6,6 +6,7 @@ import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.openmrs.Location;
 import org.openmrs.Patient;
 import org.openmrs.api.AdministrationService;
 import org.openmrs.api.context.Context;
@@ -46,6 +47,7 @@ public class DefaultAppointmentValidatorTest {
     public void shouldAddErrorIfThereIsNoPatientForAnAppointment() throws Exception {
         Appointment appointment = new Appointment();
         appointment.setService(new AppointmentServiceDefinition());
+        appointment.setLocation(new Location());
         List<String> errors = new ArrayList<>();
         defaultAppointmentValidator.validate(appointment, errors);
         assertEquals(1,errors.size());
@@ -56,9 +58,32 @@ public class DefaultAppointmentValidatorTest {
     public void shouldAddErrorIfThereIsNoServiceForAnAppointment() throws Exception {
         Appointment appointment = new Appointment();
         appointment.setPatient(new Patient());
+        appointment.setLocation(new Location());
         List<String> errors = new ArrayList<>();
         defaultAppointmentValidator.validate(appointment, errors);
         assertEquals(1,errors.size());
         assertEquals("Appointment cannot be created without Service", errors.get(0));
+    }
+
+    @Test
+    public void shouldAddErrorIfThereIsNoLocationForAnAppointment() throws Exception {
+        Appointment appointment = new Appointment();
+        appointment.setPatient(new Patient());
+        appointment.setService(new AppointmentServiceDefinition());
+        List<String> errors = new ArrayList<>();
+        defaultAppointmentValidator.validate(appointment, errors);
+        assertEquals(1, errors.size());
+        assertEquals("Appointment cannot be created without Location", errors.get(0));
+    }
+
+    @Test
+    public void shouldNotAddErrorWhenPatientServiceAndLocationAreAllPresent() throws Exception {
+        Appointment appointment = new Appointment();
+        appointment.setPatient(new Patient());
+        appointment.setService(new AppointmentServiceDefinition());
+        appointment.setLocation(new Location());
+        List<String> errors = new ArrayList<>();
+        defaultAppointmentValidator.validate(appointment, errors);
+        assertEquals(0, errors.size());
     }
 }
