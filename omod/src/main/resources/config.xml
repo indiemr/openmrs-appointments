@@ -51,6 +51,7 @@
 		AppointmentRecurringPattern.hbm.xml
 		AppointmentReason.hbm.xml
 		AppointmentUnavailability.hbm.xml
+		AppointmentHold.hbm.xml
 	</mappingFiles>
 
 	<!-- Internationalization -->

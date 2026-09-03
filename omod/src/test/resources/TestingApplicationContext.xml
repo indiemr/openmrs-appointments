@@ -222,6 +222,10 @@
         </property>
     </bean>
 
+    <bean id="appointmentHoldDao" class="org.openmrs.module.appointments.dao.impl.AppointmentHoldDaoImpl">
+        <property name="sessionFactory" ref="sessionFactory"/>
+    </bean>
+
     <bean id="appointmentUnavailabilityService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
         <property name="transactionManager">
             <ref bean="transactionManager"/>
@@ -259,6 +263,7 @@
 			<bean class="org.openmrs.module.appointments.service.impl.AppointmentSlotAvailabilityServiceImpl">
 				<property name="appointmentServiceDao" ref="appointmentServiceDao"/>
 				<property name="appointmentDao" ref="appointmentDao"/>
+				<property name="appointmentHoldDao" ref="appointmentHoldDao"/>
 				<property name="appointmentUnavailabilityDao" ref="appointmentUnavailabilityDao"/>
 			</bean>
 		</property>
