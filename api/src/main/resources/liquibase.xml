@@ -1225,4 +1225,73 @@
             <where>initial_appointment_status = 'Scheduled'</where>
          </update>
     </changeSet>
+
+    <changeSet id="create-appointment-hold-table-20260902" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="appointment_hold"/>
+            </not>
+        </preConditions>
+        <comment>Temporary slot hold until OTP confirm; occupancy uses expires_at, not a job</comment>
+        <createTable tableName="appointment_hold">
+            <column name="appointment_hold_id" type="int" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="appointment_service_id" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="patient_id" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="patient_appointment_id" type="int"/>
+            <column name="start_date_time" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_date_time" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires_at" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uuid" type="varchar(38)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creator" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_changed" type="datetime"/>
+            <column name="changed_by" type="int"/>
+            <column name="voided" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voided_by" type="int"/>
+            <column name="date_voided" type="datetime"/>
+            <column name="void_reason" type="varchar(255)"/>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_appointment_hold_service"
+            baseTableName="appointment_hold" baseColumnNames="appointment_service_id"
+            referencedTableName="appointment_service" referencedColumnNames="appointment_service_id"/>
+        <addForeignKeyConstraint constraintName="fk_appointment_hold_patient"
+            baseTableName="appointment_hold" baseColumnNames="patient_id"
+            referencedTableName="patient" referencedColumnNames="patient_id"/>
+        <addForeignKeyConstraint constraintName="fk_appointment_hold_appointment"
+            baseTableName="appointment_hold" baseColumnNames="patient_appointment_id"
+            referencedTableName="patient_appointment" referencedColumnNames="patient_appointment_id"/>
+        <addForeignKeyConstraint constraintName="fk_appointment_hold_creator"
+            baseTableName="appointment_hold" baseColumnNames="creator"
+            referencedTableName="users" referencedColumnNames="user_id"/>
+        <createIndex indexName="idx_appointment_hold_slot_expiry" tableName="appointment_hold">
+            <column name="appointment_service_id"/>
+            <column name="start_date_time"/>
+            <column name="end_date_time"/>
+            <column name="status"/>
+            <column name="expires_at"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>

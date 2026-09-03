@@ -50,6 +50,11 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
     private Set<AppointmentReason> reasons;
 
     /**
+     * When converting a hold into an appointment, this hold uuid is excluded from slot occupancy.
+     */
+    private String convertingHoldUuid;
+
+    /**
      * Transient request-time flag. Not persisted. When false, booking/reschedule SMS is skipped.
      * When null, SMS follows global properties only.
      */
@@ -355,6 +360,14 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
 
     public void setReasons(Set<AppointmentReason> reasons) {
         this.reasons = reasons;
+    }
+
+    public String getConvertingHoldUuid() {
+        return convertingHoldUuid;
+    }
+    
+    public void setConvertingHoldUuid(String convertingHoldUuid) {
+        this.convertingHoldUuid = convertingHoldUuid;
     }
 }
 
