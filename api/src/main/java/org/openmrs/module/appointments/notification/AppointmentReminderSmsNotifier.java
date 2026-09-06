@@ -13,13 +13,14 @@ import org.springframework.stereotype.Component;
 public class AppointmentReminderSmsNotifier {
     private static final String APPOINTMENT_REMINDER_SMS_MESSAGE = "reminder";
 
-    public void sendReminderSms(Appointment appointment, AppointmentArgumentsMapper appointmentArgumentsMapper) {
+    public boolean sendReminderSms(Appointment appointment, AppointmentArgumentsMapper appointmentArgumentsMapper) {
         String phoneNumber = AppointmentSmsHelper.getPhoneNumber(appointment, "Phone number not found");
         if (phoneNumber == null) {
-            return;
+            return false;
         }
         OutgoingSms outgoingSms = buildOutgoingSms(phoneNumber, appointment, appointmentArgumentsMapper);
         AppointmentSmsHelper.sendWithSmsModulePrivilege(outgoingSms, "Failed to send appointment reminder SMS");
+        return true;
     }
 
     private OutgoingSms buildOutgoingSms(String phoneNumber, Appointment appointment,

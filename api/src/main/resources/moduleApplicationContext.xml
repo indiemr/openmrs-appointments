@@ -188,6 +188,12 @@
                     <ref bean="patientAppointmentNotifierService"/>
                 </property>
                 <property name="appointmentNumberGeneratorLocator" ref="appointmentNumberGeneratorLocator"/>
+                <property name="appointmentReminderSmsNotifier">
+                    <ref bean="appointmentReminderSmsNotifier"/>
+                </property>
+                <property name="appointmentArgumentsMapper">
+                    <ref bean="appointmentArgumentsMapper"/>
+                </property>
             </bean>
         </property>
         <property name="preInterceptors">

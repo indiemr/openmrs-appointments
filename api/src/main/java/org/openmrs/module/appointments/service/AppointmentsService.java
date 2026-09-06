@@ -113,5 +113,9 @@ public interface AppointmentsService {
     @Transactional
     @Authorized({MANAGE_APPOINTMENTS, MANAGE_OWN_APPOINTMENTS})
     List<Appointment> changeStatusForAppointments(List<String> appointmentUuids, AppointmentStatus toStatus);
+
+    @Transactional
+    @Authorized({MANAGE_APPOINTMENTS, MANAGE_OWN_APPOINTMENTS})
+    boolean sendReminderSms(String appointmentUuid);
 }
 
