@@ -23,7 +23,9 @@ import org.openmrs.module.appointments.model.AppointmentSearchRequestModel;
 import org.openmrs.module.appointments.model.AppointmentProviderResponse;
 import org.openmrs.module.appointments.model.AppointmentKind;
 import org.openmrs.module.appointments.model.AppointmentAudit;
+import org.openmrs.module.appointments.notification.AppointmentReminderSmsNotifier;
 import org.openmrs.module.appointments.notification.NotificationResult;
+import org.openmrs.module.appointments.service.AppointmentArgumentsMapper;
 import org.openmrs.module.appointments.service.AppointmentNumberGenerator;
 import org.openmrs.module.appointments.service.AppointmentNumberGeneratorLocator;
 import org.openmrs.module.appointments.service.AppointmentsService;
@@ -66,9 +68,12 @@ public class AppointmentsServiceImpl implements AppointmentsService {
     private TeleconsultationAppointmentService teleconsultationAppointmentService;
 
     private PatientAppointmentNotifierService appointmentNotifierService;
+
     private AppointmentNumberGeneratorLocator appointmentNumberGeneratorLocator;
 
-
+    private AppointmentReminderSmsNotifier appointmentReminderSmsNotifier;
+    
+    private AppointmentArgumentsMapper appointmentArgumentsMapper;
 
     public void setAppointmentDao(AppointmentDao appointmentDao) {
         this.appointmentDao = appointmentDao;
@@ -179,6 +184,18 @@ public class AppointmentsServiceImpl implements AppointmentsService {
             // appointment.setTeleHealthVideoLink(teleconsultationAppointmentService.generateTeleconsultationLink(appointment.getUuid()));
             // appointment.setTeleHealthVideoLink(teleconsultationAppointmentService.generateTeleconsultationLink(appointment.getAppointmentNumber()));
         }
+    }
+
+    @Override
+    public boolean sendReminderSms(String appointmentUuid) {
+        Appointment appointment = getAppointmentByUuid(appointmentUuid);
+        if (appointment == null) {
+            throw new RuntimeException("Appointment does not exist");
+        }
+        if (appointment.getStatus() == AppointmentStatus.Cancelled) {
+            throw new RuntimeException("Cannot send reminder SMS for a cancelled appointment");
+        }
+        return appointmentReminderSmsNotifier.sendReminderSms(appointment, appointmentArgumentsMapper);
     }
 
     private boolean isVirtual(Appointment appointment) {
@@ -484,6 +501,14 @@ public class AppointmentsServiceImpl implements AppointmentsService {
 
     public void setAppointmentNumberGeneratorLocator(AppointmentNumberGeneratorLocator appointmentNumberGeneratorLocator) {
         this.appointmentNumberGeneratorLocator = appointmentNumberGeneratorLocator;
+    }
+
+    public void setAppointmentReminderSmsNotifier(AppointmentReminderSmsNotifier appointmentReminderSmsNotifier) {
+        this.appointmentReminderSmsNotifier = appointmentReminderSmsNotifier;
+    
+    }
+    public void setAppointmentArgumentsMapper(AppointmentArgumentsMapper appointmentArgumentsMapper) {
+        this.appointmentArgumentsMapper = appointmentArgumentsMapper;
     }
 
     @Transactional

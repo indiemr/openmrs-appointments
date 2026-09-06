@@ -87,8 +87,26 @@ public class AppointmentArgumentsMapperImpl implements AppointmentArgumentsMappe
         if (location == null) {
             return "xxxxx";
         }
-        Location facilityLocation = getParentVisitLocationUuid(location);
-        return facilityLocation != null ? facilityLocation.getName() : "xxxxx";
+        return stripParentPrefix(location);
+        // Location facilityLocation = getParentVisitLocationUuid(location);
+        // Location facilityLocation = location;
+        // return facilityLocation != null ? facilityLocation.getName() : "xxxxx";
+    }
+
+    private String stripParentPrefix(Location location) {
+        String childName = location.getName();
+        if (childName == null) {
+            return "xxxxx";
+        }
+        Location parent = location.getParentLocation();
+        if (parent == null || parent.getName() == null) {
+            return childName;
+        }
+        String prefix = parent.getName() + "_";
+        if (childName.startsWith(prefix)) {
+            return childName.substring(prefix.length()).trim();
+        }
+        return childName;
     }
 
     private Location getParentVisitLocationUuid(Location location) {

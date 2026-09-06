@@ -282,4 +282,35 @@ public class AppointmentsControllerTest {
         verify(appointmentMapper, never()).constructResponse(anyList());
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     }
+
+    @Test
+    public void shouldSendReminderSms() {
+        String uuid = "appt-uuid";
+        when(appointmentsService.sendReminderSms(uuid)).thenReturn(true);
+
+        ResponseEntity<Object> response = appointmentsController.sendReminderSms(uuid);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(appointmentsService, times(1)).sendReminderSms(uuid);
+    }
+
+    @Test
+    public void shouldReturnBadRequestWhenPhoneNumberMissing() {
+        String uuid = "appt-uuid";
+        when(appointmentsService.sendReminderSms(uuid)).thenReturn(false);
+
+        ResponseEntity<Object> response = appointmentsController.sendReminderSms(uuid);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    }
+
+    @Test
+    public void shouldReturnBadRequestWhenAppointmentMissing() {
+        when(appointmentsService.sendReminderSms("missing"))
+                .thenThrow(new RuntimeException("Appointment does not exist"));
+
+        ResponseEntity<Object> response = appointmentsController.sendReminderSms("missing");
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    }
 }

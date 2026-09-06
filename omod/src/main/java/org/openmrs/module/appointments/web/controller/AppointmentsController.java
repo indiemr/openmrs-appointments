@@ -33,6 +33,7 @@ import javax.validation.Valid;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -157,4 +158,21 @@ public class AppointmentsController extends BaseRestController {
         }
     }
 
+    @RequestMapping(method = RequestMethod.POST, value = "/{appointmentUuid}/reminder")
+    @ResponseBody
+    public ResponseEntity<Object> sendReminderSms(@PathVariable("appointmentUuid") String appointmentUuid) {
+        try {
+            boolean sent = appointmentsService.sendReminderSms(appointmentUuid);
+            if (!sent) {
+                throw new RuntimeException("Phone number not found for patient");
+            }
+            Map<String, Object> body = new HashMap<>();
+            body.put("appointmentUuid", appointmentUuid);
+            body.put("sent", true);
+            return new ResponseEntity<>(body, HttpStatus.OK);
+        } catch (RuntimeException e) {
+            log.error("Runtime error while trying to send reminder SMS", e);
+            return new ResponseEntity<>(RestUtil.wrapErrorResponse(e, e.getMessage()), HttpStatus.BAD_REQUEST);
+        }
+    }
 }
