@@ -7,7 +7,7 @@ import org.openmrs.api.context.Context;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentProvider;
 import org.openmrs.module.appointments.service.AppointmentArgumentsMapper;
-
+import org.openmrs.module.appointments.util.AppointmentDateOnlyUtil;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -55,14 +55,16 @@ public class AppointmentArgumentsMapperImpl implements AppointmentArgumentsMappe
         String givenName = patient.getGivenName() != null ? patient.getGivenName() : "";
         String familyName = patient.getFamilyName() != null ? patient.getFamilyName() : "";
         String identifier = patient.getPatientIdentifier().getIdentifier();
-        Date appointmentDate = appointment.getStartDateTime();
         String appointmentKind = appointment.getAppointmentKind().getValue();
         String service = appointment.getService().getName();
         String teleLink = appointment.getTeleHealthVideoLink();
-        String smsTimeZone = Context.getMessageSourceService().getMessage(Context.getAdministrationService().getGlobalProperty("sms.timezone"), null, new Locale("en"));
-        String smsDateFormat = Context.getMessageSourceService().getMessage(Context.getAdministrationService().getGlobalProperty("sms.dateformat"), null, new Locale("en"));
-        String date = convertUTCToGivenFormat(appointmentDate, smsDateFormat, smsTimeZone);
-        String helpdeskNumber = Context.getAdministrationService().getGlobalPropertyObject("clinic.helpDeskNumber").getPropertyValue();
+        String smsTimeZone = Context.getMessageSourceService().getMessage(
+                Context.getAdministrationService().getGlobalProperty("sms.timezone"), null, new Locale("en"));
+        String smsDateFormat = Context.getMessageSourceService().getMessage(
+                Context.getAdministrationService().getGlobalProperty("sms.dateformat"), null, new Locale("en"));
+        String date = formatSmsDate(appointment, smsDateFormat, smsTimeZone);
+        String helpdeskNumber = Context.getAdministrationService()
+                .getGlobalPropertyObject("clinic.helpDeskNumber").getPropertyValue();
         String facilityName = getFacilityName(appointment.getLocation());
         arguments.put("patientname", givenName + " " + familyName);
         arguments.put("identifier", identifier);
@@ -74,6 +76,15 @@ public class AppointmentArgumentsMapperImpl implements AppointmentArgumentsMappe
         arguments.put("helpdesknumber", helpdeskNumber);
         arguments.put("appointmentKind", appointmentKind);
         return arguments;
+    }
+
+    private String formatSmsDate(Appointment appointment, String smsDateFormat, String smsTimeZone) {
+        if (appointment.isDateOnlyAppointment()) {
+            String dateOnly = AppointmentDateOnlyUtil.formatAppointmentDate(appointment.getAppointmentDate());
+            return dateOnly != null ? dateOnly : "";
+        }
+        String date = convertUTCToGivenFormat(appointment.getStartDateTime(), smsDateFormat, smsTimeZone);
+        return date != null ? date : "";
     }
 
     public String getFacilityName(Location location) {
