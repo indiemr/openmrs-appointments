@@ -11,6 +11,7 @@ import org.openmrs.Concept;
 import org.openmrs.Location;
 import org.openmrs.Patient;
 import org.openmrs.Provider;
+import org.openmrs.api.APIException;
 import org.openmrs.api.ConceptService;
 import org.openmrs.api.LocationService;
 import org.openmrs.api.PatientService;
@@ -88,6 +89,11 @@ public class AppointmentMapper {
         Appointment appointment;
         if (!StringUtils.isBlank(appointmentRequest.getUuid())) {
             appointment = appointmentsService.getAppointmentByUuid(appointmentRequest.getUuid());
+            if (appointment == null) {
+                // An unknown uuid returns null here. Fail with a clear message rather than letting the
+                // mapping below NPE.
+                throw new APIException("No appointment found with uuid: " + appointmentRequest.getUuid());
+            }
         } else {
             appointment = new Appointment();
             appointment.setPatient(patientService.getPatientByUuid(appointmentRequest.getPatientUuid()));
@@ -111,6 +117,12 @@ public class AppointmentMapper {
         AppointmentServiceDefinition appointmentServiceDefinition = appointmentServiceDefinitionService.getAppointmentServiceByUuid(appointmentRequest.getServiceUuid());
         AppointmentServiceType appointmentServiceType = null;
         if (appointmentRequest.getServiceTypeUuid() != null) {
+            if (appointmentServiceDefinition == null) {
+                // Null whenever the service uuid is unknown. Without this guard the dereference below
+                // throws NPE -- 500 on /appointments/conflicts, and a stack-trace 400 on save, because
+                // an NPE is not an APIException and skips the WARN branch entirely.
+                throw new APIException("Invalid service or service not found");
+            }
             appointmentServiceType = getServiceTypeByUuid(appointmentServiceDefinition.getServiceTypes(true), appointmentRequest.getServiceTypeUuid());
         }
         if (StringUtils.isNotBlank(appointmentRequest.getStatus())){
@@ -119,14 +131,27 @@ public class AppointmentMapper {
 
         if (appointmentRequest.getDateAppointmentScheduled() != null) {
             appointment.setDateAppointmentScheduled(appointmentRequest.getDateAppointmentScheduled());
-        } else {
+        } else if (appointment.getDateAppointmentScheduled() == null) {
+            // Only stamp on create. This method is also the edit path, and edit payloads omit the
+            // field, so stamping unconditionally overwrote the original booking date on every edit.
             appointment.setDateAppointmentScheduled(new Date());
         }
         appointment.setServiceType(appointmentServiceType);
         appointment.setService(appointmentServiceDefinition);
         //appointment.setProvider(identifyAppointmentProvider(appointmentRequest.getProviderUuid()));
-        appointment.setLocation(identifyAppointmentLocation(appointmentRequest.getLocationUuid()));
-        
+        if (StringUtils.isNotBlank(appointmentRequest.getLocationUuid()) || appointment.getLocation() == null) {
+            // Retain the stored location when an edit omits it. Blanking it silently kills the
+            // row's billing, calendar and SMS side effects, all of which re-resolve the appointment
+            // after save.
+            Location location = identifyAppointmentLocation(appointmentRequest.getLocationUuid());
+            if (location == null && StringUtils.isNotBlank(appointmentRequest.getLocationUuid())) {
+                // An unknown location uuid returns null; assigning it would persist a row with no
+                // location instead of rejecting a bad request.
+                throw new APIException("Invalid location or location not found");
+            }
+            appointment.setLocation(location);
+        }
+
         appointment.setAppointmentKind(AppointmentKind.valueOf(appointmentRequest.getAppointmentKind()));
         appointment.setComments(appointmentRequest.getComments());
         appointment.setSendSms(appointmentRequest.getSendSms());

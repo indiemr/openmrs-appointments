@@ -83,6 +83,14 @@ public class AppointmentRecurringPatternServiceImpl implements AppointmentRecurr
         }
 
         appointmentServiceHelper.validate(appointments.get(0), appointmentValidators);
+        // The validator set above only sees occurrence 1. Occurrences 2..N are persisted
+        // unvalidated, and a location-less row loses its billing, calendar and SMS side
+        // effects silently, so check location across every occurrence.
+        for (int i = 1; i < appointments.size(); i++) {
+            if (appointments.get(i).getLocation() == null) {
+                throw new APIException("Appointment cannot be created without Location");
+            }
+        }
         updateAppointmentsDetails(appointmentRecurringPattern, appointments);
         appointmentRecurringPatternDao.save(appointmentRecurringPattern);
         return appointmentRecurringPattern;
@@ -132,7 +140,13 @@ public class AppointmentRecurringPatternServiceImpl implements AppointmentRecurr
                 .filter(app -> !app.getVoided())
                 .collect(Collectors.toList()).get(0);
         updateAppointmentsDetails(appointmentRecurringPattern, updatedAppointments);
-        appointmentServiceHelper.validate(editedAppointment.getRelatedAppointment(), editAppointmentValidators);
+        // Validate the appointment that is actually being persisted. Only its RELATED
+        // appointment used to be checked, so a single-occurrence edit (applyForAll=false)
+        // reached the database without passing any edit validator at all.
+        appointmentServiceHelper.validate(editedAppointment, editAppointmentValidators);
+        if (editedAppointment.getRelatedAppointment() != null) {
+            appointmentServiceHelper.validate(editedAppointment.getRelatedAppointment(), editAppointmentValidators);
+        }
         appointmentRecurringPatternDao.save(appointmentRecurringPattern);
         return editedAppointment;
     }

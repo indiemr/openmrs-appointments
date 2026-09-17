@@ -26,5 +26,10 @@ public class DefaultEditAppointmentValidator implements AppointmentValidator {
         }
         if (requestAppointment.getService() == null)
             errors.add("Appointment cannot be updated without Service");
+        // Same reason DefaultAppointmentValidator rejects it on create. Edits reach here with a
+        // null location on the applyForAll=false recurring route, which rebuilds the row from
+        // scratch and so has no stored location to retain.
+        if (requestAppointment.getLocation() == null)
+            errors.add("Appointment cannot be updated without Location");
     }
 }
