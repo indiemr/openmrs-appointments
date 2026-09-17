@@ -142,7 +142,10 @@ public class AppointmentControllerTest {
                 AppointmentStatus.Completed,
                 AppointmentStatus.Scheduled,
                 AppointmentStatus.CheckedIn,
-                AppointmentStatus.Missed);
+                AppointmentStatus.Missed,
+                AppointmentStatus.Confirmed,
+                AppointmentStatus.WaitList,
+                AppointmentStatus.Tentative);
         AppointmentServiceDefaultResponse appointmentServiceDefaultResponse = new AppointmentServiceDefaultResponse();
         appointmentServiceDefaultResponse.setUuid("someUuid");
 
