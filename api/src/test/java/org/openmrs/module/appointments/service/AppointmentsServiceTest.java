@@ -33,7 +33,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@org.springframework.test.context.ContextConfiguration(locations = {"classpath:TestingApplicationContext.xml"}, inheritLocations = true)
+@org.springframework.test.context.ContextConfiguration(locations = {"classpath:applicationContext-service.xml", "classpath:moduleApplicationContext.xml", "classpath:TestingApplicationContext.xml"}, inheritLocations = false)
 public class AppointmentsServiceTest extends BaseModuleWebContextSensitiveTest {
     private String adminUser;
     private String adminUserPassword;
