@@ -6,8 +6,11 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.*;
+import org.openmrs.Location;
 import org.openmrs.User;
+import org.openmrs.api.LocationService;
 import org.openmrs.api.context.Context;
+import org.openmrs.api.context.UserContext;
 import org.openmrs.module.appointments.dao.AppointmentServiceDao;
 import org.openmrs.module.appointments.model.*;
 import org.openmrs.module.appointments.service.AppointmentsService;
@@ -67,8 +70,23 @@ public class AppointmentServiceDefinitionServiceImplTest {
 
     @Test
     public void testGetAllAppointmentServices() throws Exception {
+        Location sessionLocation = new Location();
+        sessionLocation.setLocationId(1);
+        sessionLocation.setUuid("session-location-uuid");
+
+        UserContext userContext = Mockito.mock(UserContext.class);
+        when(userContext.getLocation()).thenReturn(sessionLocation);
+        PowerMockito.when(Context.getUserContext()).thenReturn(userContext);
+
+        LocationService locationService = Mockito.mock(LocationService.class);
+        PowerMockito.when(Context.getLocationService()).thenReturn(locationService);
+        when(locationService.getLocation(1)).thenReturn(sessionLocation);
+        when(locationService.getLocations(null, sessionLocation, null, false, null, null))
+                .thenReturn(Collections.emptyList());
+
         appointmentServiceService.getAllAppointmentServices(false);
-        Mockito.verify(appointmentServiceDao, times(1)).getAllAppointmentServices(false, Mockito.anyList());
+        Mockito.verify(appointmentServiceDao, times(1))
+                .getAllAppointmentServices(false, Collections.singletonList("session-location-uuid"));
     }
 
     @Test
@@ -295,7 +313,7 @@ public class AppointmentServiceDefinitionServiceImplTest {
         Date endDateTime = DateUtil.convertToLocalDateFromUTC("2108-08-15T18:29:29.0Z");
         appointmentServiceService.calculateCurrentLoad(appointmentServiceDefinition,
                 startDateTime, endDateTime);
-        AppointmentStatus[] includeStatus = new AppointmentStatus[]{AppointmentStatus.CheckedIn, AppointmentStatus.Completed, AppointmentStatus.Scheduled};
+        AppointmentStatus[] includeStatus = new AppointmentStatus[]{AppointmentStatus.CheckedIn, AppointmentStatus.Completed, AppointmentStatus.Scheduled, AppointmentStatus.Confirmed};
 
         Mockito.verify(appointmentsService, times(1)).getAppointmentsForService(appointmentServiceDefinition, startDateTime, endDateTime,
                 Arrays.asList(includeStatus));
