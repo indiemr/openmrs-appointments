@@ -731,7 +731,7 @@ public class AppointmentsServiceImplTest {
         verify(appointmentDao, times(1)).save(appointmentArgumentCaptor.capture());
 
         Appointment savedAppointment = appointmentArgumentCaptor.getValue();
-        assertEquals(AppointmentStatus.Scheduled, savedAppointment.getStatus());
+        assertEquals(AppointmentStatus.Confirmed, savedAppointment.getStatus());
         assertEquals(AppointmentProviderResponse.ACCEPTED, savedAppointment.getProviders().iterator().next().getResponse());
     }
 
