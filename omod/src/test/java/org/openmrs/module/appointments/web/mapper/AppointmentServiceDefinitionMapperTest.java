@@ -22,6 +22,8 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+import org.openmrs.Person;
+import org.openmrs.PersonName;
 import org.openmrs.Provider;
 import org.openmrs.api.ProviderService;
 
@@ -502,9 +504,15 @@ public class AppointmentServiceDefinitionMapperTest {
 
     @Test
     public void shouldIncludeProviderInDefaultResponse() throws Exception {
+        // Provider.getName() reads through the linked Person; core logs
+        // "We no longer support providers who are not linked to person" and
+        // returns null when there is none, so setName() alone is not enough.
+        Person person = new Person();
+        person.addName(new PersonName("Dr", null, "Smith"));
+
         Provider provider = new Provider();
         provider.setUuid("provider-uuid");
-        provider.setName("Dr Smith");
+        provider.setPerson(person);
 
         AppointmentServiceDefinition service = createAppointmentService(
                 "Cardiology-OPD", Time.valueOf("09:00:00"), Time.valueOf("17:00:00"), 30, 10);

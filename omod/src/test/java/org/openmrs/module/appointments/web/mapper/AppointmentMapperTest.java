@@ -213,7 +213,7 @@ public class AppointmentMapperTest {
         assertEquals(appointmentRequest.getStartDateTime(), appointment.getStartDateTime());
         assertEquals(appointmentRequest.getEndDateTime(), appointment.getEndDateTime());
         assertEquals(AppointmentKind.valueOf(appointmentRequest.getAppointmentKind()), appointment.getAppointmentKind());
-        assertEquals(AppointmentStatus.Scheduled, appointment.getStatus());
+        assertEquals(AppointmentStatus.Confirmed, appointment.getStatus());
         assertEquals(appointmentRequest.getComments(), appointment.getComments());
     }
 
@@ -707,7 +707,7 @@ public class AppointmentMapperTest {
         assertEquals(appointmentRequest.getStartDateTime(), appointment.getStartDateTime());
         assertEquals(appointmentRequest.getEndDateTime(), appointment.getEndDateTime());
         assertEquals(AppointmentKind.valueOf(appointmentRequest.getAppointmentKind()), appointment.getAppointmentKind());
-        assertEquals(AppointmentStatus.Scheduled, appointment.getStatus());
+        assertEquals(AppointmentStatus.Confirmed, appointment.getStatus());
         assertEquals(appointmentRequest.getComments(), appointment.getComments());
     }
 
