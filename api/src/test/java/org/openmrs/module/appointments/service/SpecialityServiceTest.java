@@ -14,7 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@org.springframework.test.context.ContextConfiguration(locations = {"classpath:TestingApplicationContext.xml"}, inheritLocations = true)
+@org.springframework.test.context.ContextConfiguration(locations = {"classpath:applicationContext-service.xml", "classpath:moduleApplicationContext.xml", "classpath:TestingApplicationContext.xml"}, inheritLocations = false)
 public class SpecialityServiceTest extends BaseModuleWebContextSensitiveTest {
     private String adminUser;
     private String manageUser;
