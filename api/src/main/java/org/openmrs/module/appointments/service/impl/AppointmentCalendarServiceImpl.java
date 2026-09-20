@@ -17,6 +17,7 @@ import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentKind;
 import org.openmrs.module.appointments.model.AppointmentProvider;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
+import org.openmrs.module.appointments.model.AppointmentStatus;
 import org.openmrs.module.appointments.service.AppointmentCalendarService;
 import org.openmrs.module.appointments.util.AppointmentServiceCapacityUtil;
 import org.openmrs.module.appointments.util.AppointmentStatusUtil;
@@ -50,7 +51,7 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
         if (appointment == null) {
             throw new IllegalArgumentException("Appointment not found: " + appointmentUuid);
         }
-        if (!shouldSyncToCalendar(appointment)) {
+        if (!shouldCreateCalendarEvent(appointment)) {
             return null;
         }
 
@@ -95,9 +96,9 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
             throw new IllegalArgumentException("Appointment not found: " + appointmentUuid);
         }
         
-        if (!shouldSyncToCalendar(appointment)) {
-             // e.g. rescheduled to date-only / no longer confirmed
-            // cancel only if events exist — cancelAll is safe when none exist
+        // 1. Event cancellation logic
+        if (!shouldKeepSyncedCalendarEvent(appointment)) {
+            // date-only / tentative / cancelled / missed / kind no longer calendar-backed
             try {
                 cancelAllCalendarEventsForAppointment(appointmentUuid);
                 if (StringUtils.isNotBlank(appointment.getTeleHealthVideoLink())) {
@@ -112,6 +113,8 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
             }
             return;
         }
+
+        // 2. Event update logic
 
         Provider provider = resolveProvider(appointment);
         if (provider == null) {
@@ -130,6 +133,7 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
             boolean calendarEventExistsForCurrentProvider = teleconsultService.hasActiveCalendarEvent(
                 provider, OAUTH_PROVIDER_CODE, RESOURCE_TYPE, appointment.getUuid());
 
+            // 2.1) If any calendar event found for appointment provider, update the event factors like timing, title.
             if (calendarEventExistsForCurrentProvider) {
                 UpdateCalendarEventRequest request = buildUpdateRequest(appointment);
                 CreateCalendarEventResponse response = teleconsultService.updateCalendarEvent(provider, request);
@@ -143,19 +147,16 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
                 log.info("Updated calendar event for appointment " + appointment.getUuid()
                     + (response != null && StringUtils.isNotBlank(response.getMeetingUrl())
                         ? " with meet link" : ""));
-            } else {
-                 // no event for current provider → clear any other provider's events, then create
-                cancelAllCalendarEventsForAppointment(appointment.getUuid());
-
-                // clear stale meet link before recreate
-                if (StringUtils.isNotBlank(appointment.getTeleHealthVideoLink())) {
-                    appointment.setTeleHealthVideoLink(null);
-                    appointmentDao.save(appointment);
-                }
-                
+            
+            // 2.2) If no calendar event created so far, then create new calendar event for the appointment provider
+            } else if (AppointmentStatusUtil.isConfirmed(appointment.getStatus())) {
                 // Tentative/date-only → Confirmed timed: first sync
+                cancelAllCalendarEventsForAppointment(appointment.getUuid());
                 createCalendarEventForAppointment(appointmentUuid);
-                log.info("Calendar event is missing, Creating new calendar event on update for appointment " + appointment.getUuid());
+                log.info("Calendar event is missing, creating for appointment " + appointment.getUuid());
+            } else {
+                log.info("Skipping calendar recreate for appointment " + appointment.getUuid()
+                        + " (status " + appointment.getStatus() + "); keeping existing meet link");
             }
         } catch (Exception e) {
             log.error("Failed to update calendar event for appointment " + appointment.getUuid(), e);
@@ -208,7 +209,7 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
         }
         return appointment != null;
     }
-
+    
     private boolean shouldSyncToCalendar(Appointment appointment) {
         if (!isOAuthProviderModuleStarted() || getTeleconsultService() == null) {
             return false;
@@ -221,7 +222,8 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
         if (appointment.isDateOnlyAppointment()) {
             return false;
         }
-        if (!AppointmentStatusUtil.isConfirmed(appointment.getStatus())) {
+
+        if (!shouldKeepCalendarEvent(appointment)) {
             return false;
         }
     
@@ -445,5 +447,36 @@ public class AppointmentCalendarServiceImpl implements AppointmentCalendarServic
             }
         }
         return null;
+    }
+
+    private boolean shouldKeepCalendarEvent(Appointment appointment) {
+        AppointmentStatus status = appointment.getStatus();
+        return status == AppointmentStatus.Scheduled
+            || status == AppointmentStatus.Confirmed
+            || status == AppointmentStatus.Arrived
+            || status == AppointmentStatus.CheckedIn
+            || status == AppointmentStatus.Completed;
+    }
+    
+    private boolean hasCalendarShape(Appointment appointment) {
+        if (!isOAuthProviderModuleStarted() || getTeleconsultService() == null) {
+            return false;
+        }
+        if (appointment == null || appointment.isDateOnlyAppointment()) {
+            return false;
+        }
+        if (appointment.getStartDateTime() == null || appointment.getEndDateTime() == null) {
+            return false;
+        }
+        AppointmentKind kind = appointment.getAppointmentKind();
+        return AppointmentKind.Virtual.equals(kind) || AppointmentKind.Scheduled.equals(kind);
+    }
+    
+    private boolean shouldCreateCalendarEvent(Appointment appointment) {
+        return hasCalendarShape(appointment) && AppointmentStatusUtil.isConfirmed(appointment.getStatus());
+    }
+    
+    private boolean shouldKeepSyncedCalendarEvent(Appointment appointment) {
+        return hasCalendarShape(appointment) && shouldKeepCalendarEvent(appointment);
     }
 }
