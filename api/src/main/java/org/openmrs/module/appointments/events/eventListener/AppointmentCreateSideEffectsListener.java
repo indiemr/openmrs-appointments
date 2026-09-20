@@ -66,11 +66,11 @@ public class AppointmentCreateSideEffectsListener {
 
         Appointment responseAppointment = event.getAppointment();
         String appointmentUuid = responseAppointment.getUuid();
-        boolean cancelled = AppointmentStatus.Cancelled.equals(responseAppointment.getStatus());
+        boolean cancelledOrMissed = AppointmentStatus.Cancelled.equals(responseAppointment.getStatus()) || AppointmentStatus.Missed.equals(responseAppointment.getStatus());
         boolean createBill = Boolean.TRUE.equals(responseAppointment.getCreateBill());
 
         // 1) Cancel -> void bill
-        if (cancelled) {
+        if (cancelledOrMissed) {
             if (StringUtils.isNotBlank(responseAppointment.getBillUuid())) {
                 try {
                     appointmentBillingService.voidBillForAppointment(appointmentUuid, "Appointment cancelled");
@@ -106,7 +106,7 @@ public class AppointmentCreateSideEffectsListener {
 
         // 4) Calendar sync (service skips date-only / non-confirmed)
         try {
-            if (cancelled) {
+            if (cancelledOrMissed) {
                 appointmentCalendarService.cancelCalendarEventForAppointment(appointmentUuid);
             } else {
                 appointmentCalendarService.updateCalendarEventForAppointment(appointmentUuid);
