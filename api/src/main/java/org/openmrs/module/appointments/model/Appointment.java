@@ -69,6 +69,12 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
     private Boolean createBill;
 
     /**
+     * Transient request-time payments. Not persisted.
+     * Applied to the appointment bill after create/sync.
+     */
+    private List<AppointmentPayment> payments;
+
+    /**
      * This attribute is not a entity property. Just a placeholder for the clients to prepare response relevant  to notification
      */
     private List<NotificationResult> notificationResults;
@@ -306,6 +312,14 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
     
     public void setCreateBill(Boolean createBill) {
         this.createBill = createBill;
+    }
+
+    public List<AppointmentPayment> getPayments() {
+        return payments;
+    }
+
+    public void setPayments(List<AppointmentPayment> payments) {
+        this.payments = payments;
     }
 
     public Boolean getDateOnly() {

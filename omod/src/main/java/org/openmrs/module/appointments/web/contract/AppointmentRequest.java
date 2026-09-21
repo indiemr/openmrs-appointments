@@ -2,6 +2,7 @@ package org.openmrs.module.appointments.web.contract;
 
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import org.openmrs.module.appointments.model.AppointmentPayment;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -27,6 +28,7 @@ public class AppointmentRequest {
     private List<String> reasonConceptUuids;
     private Boolean sendSms;
     private Boolean createBill;
+    private List<AppointmentPayment> payments;
     private Boolean dateOnly = false;
     private String appointmentDate; // "yyyy-MM-dd"
 
@@ -36,6 +38,14 @@ public class AppointmentRequest {
 
     public void setCreateBill(Boolean createBill) {
         this.createBill = createBill;
+    }
+
+    public List<AppointmentPayment> getPayments() {
+        return payments;
+    }
+
+    public void setPayments(List<AppointmentPayment> payments) {
+        this.payments = payments;
     }
 
     public Boolean getSendSms() {

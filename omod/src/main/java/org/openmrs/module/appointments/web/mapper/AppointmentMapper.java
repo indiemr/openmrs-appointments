@@ -4,6 +4,7 @@ import org.openmrs.module.Module;
 import org.openmrs.module.ModuleFactory;
 import org.openmrs.module.billing.api.IBillService;
 import org.openmrs.module.billing.api.model.Bill;
+import org.openmrs.module.billing.api.model.Payment;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,6 +31,7 @@ import org.openmrs.module.appointments.service.AppointmentsService;
 import org.openmrs.module.appointments.util.AppointmentDateOnlyUtil;
 import org.openmrs.module.appointments.web.contract.AppointmentBillSummary;
 import org.openmrs.module.appointments.web.contract.AppointmentDefaultResponse;
+import org.openmrs.module.appointments.web.contract.AppointmentPaymentSummary;
 import org.openmrs.module.appointments.web.contract.AppointmentProviderDetail;
 import org.openmrs.module.appointments.web.contract.AppointmentQuery;
 import org.openmrs.module.appointments.web.contract.AppointmentReasonResponse;
@@ -131,6 +133,7 @@ public class AppointmentMapper {
         appointment.setComments(appointmentRequest.getComments());
         appointment.setSendSms(appointmentRequest.getSendSms());
         appointment.setCreateBill(appointmentRequest.getCreateBill());
+        appointment.setPayments(appointmentRequest.getPayments());
         if (appointmentRequest.getPriority() != null || StringUtils.isNotBlank(appointmentRequest.getPriority())) {
                 appointment.setPriority(AppointmentPriority.valueOf(appointmentRequest.getPriority()));
         }
@@ -374,7 +377,9 @@ public class AppointmentMapper {
             AppointmentBillSummary summary = new AppointmentBillSummary();
             summary.setUuid(bill.getUuid());
             summary.setAmount(bill.getTotal());
+            summary.setPaidAmount(bill.getTotalPayments());
             summary.setStatus(bill.getStatus() != null ? bill.getStatus().name() : null);
+            summary.setPayments(mapBillPayments(bill));
             if (bill.getLineItems() != null && !bill.getLineItems().isEmpty()
                     && bill.getLineItems().get(0).getBillableService() != null) {
                 summary.setDisplay(bill.getLineItems().get(0).getBillableService().getName());
@@ -384,6 +389,28 @@ public class AppointmentMapper {
             log.warn("Could not resolve bill for appointment", e);
             return null;
         }
+    }
+
+    private List<AppointmentPaymentSummary> mapBillPayments(Bill bill) {
+        List<AppointmentPaymentSummary> result = new ArrayList<>();
+        if (bill.getPayments() == null) {
+            return result;
+        }
+        for (Payment payment : bill.getPayments()) {
+            if (payment == null || Boolean.TRUE.equals(payment.getVoided())) {
+                continue;
+            }
+            AppointmentPaymentSummary item = new AppointmentPaymentSummary();
+            item.setUuid(payment.getUuid());
+            item.setAmount(payment.getAmount());
+            item.setAmountTendered(payment.getAmountTendered());
+            if (payment.getInstanceType() != null) {
+                item.setPaymentMode(payment.getInstanceType().getUuid());
+                item.setDisplay(payment.getInstanceType().getName());
+            }
+            result.add(item);
+        }
+        return result;
     }
     
     private boolean isBillingModuleStarted() {

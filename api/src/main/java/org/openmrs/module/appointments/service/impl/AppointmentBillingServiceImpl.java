@@ -14,18 +14,21 @@ import org.openmrs.module.Module;
 import org.openmrs.module.ModuleFactory;
 import org.openmrs.module.appointments.dao.AppointmentDao;
 import org.openmrs.module.appointments.model.Appointment;
+import org.openmrs.module.appointments.model.AppointmentPayment;
 import org.openmrs.module.appointments.model.AppointmentProvider;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.service.AppointmentBillingService;
 import org.openmrs.module.billing.api.IBillService;
 import org.openmrs.module.billing.api.IBillableItemsService;
 import org.openmrs.module.billing.api.ICashPointService;
+import org.openmrs.module.billing.api.IPaymentModeService;
 import org.openmrs.module.billing.api.model.Bill;
 import org.openmrs.module.billing.api.model.BillLineItem;
 import org.openmrs.module.billing.api.model.BillStatus;
 import org.openmrs.module.billing.api.model.BillableService;
 import org.openmrs.module.billing.api.model.CashPoint;
 import org.openmrs.module.billing.api.model.CashierItemPrice;
+import org.openmrs.module.billing.api.model.PaymentMode;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
@@ -101,6 +104,43 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
         appointmentDao.save(appointment);
         log.info("Created bill " + savedBill.getUuid() + " for appointment " + appointment.getUuid());
         return savedBill.getUuid();
+    }
+
+    @Override
+    public void addPaymentsForAppointment(String appointmentUuid, List<AppointmentPayment> payments) {
+        if (payments == null || payments.isEmpty()) {
+            return;
+        }
+        Appointment appointment = appointmentDao.getAppointmentByUuid(appointmentUuid);
+        if (appointment == null || StringUtils.isBlank(appointment.getBillUuid())) {
+            log.warn("No bill on appointment " + appointmentUuid + "; skipping payments");
+            return;
+        }
+
+        IBillService billService = Context.getService(IBillService.class);
+        Bill bill = billService.getByUuid(appointment.getBillUuid());
+        if (bill == null || Boolean.TRUE.equals(bill.getVoided())) {
+            log.warn("Bill missing/voided for appointment " + appointmentUuid + "; skipping payments");
+            return;
+        }
+
+        IPaymentModeService paymentModeService = Context.getService(IPaymentModeService.class);
+        for (AppointmentPayment payment : payments) {
+            if (payment == null || payment.getAmount() == null || StringUtils.isBlank(payment.getPaymentMode())) {
+                throw new IllegalArgumentException("Each payment requires amount and paymentMode");
+            }
+            PaymentMode mode = paymentModeService.getByUuid(payment.getPaymentMode());
+            if (mode == null) {
+                throw new IllegalArgumentException("Payment mode not found: " + payment.getPaymentMode());
+            }
+            BigDecimal tendered = payment.getAmountTendered() != null
+                    ? payment.getAmountTendered()
+                    : payment.getAmount();
+            bill.addPayment(mode, null, payment.getAmount(), tendered);
+        }
+        billService.save(bill);
+        log.info("Added " + payments.size() + " payment(s) to bill " + bill.getUuid()
+                + " for appointment " + appointmentUuid);
     }
 
     @Override
