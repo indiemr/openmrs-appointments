@@ -126,17 +126,14 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
 
         IPaymentModeService paymentModeService = Context.getService(IPaymentModeService.class);
         for (AppointmentPayment payment : payments) {
-            if (payment == null || payment.getAmount() == null || StringUtils.isBlank(payment.getPaymentMode())) {
-                throw new IllegalArgumentException("Each payment requires amount and paymentMode");
+            if (payment == null || payment.getAmountPaying() == null || StringUtils.isBlank(payment.getPaymentMode())) {
+                throw new IllegalArgumentException("Each payment requires amountPaying and paymentMode");
             }
             PaymentMode mode = paymentModeService.getByUuid(payment.getPaymentMode());
             if (mode == null) {
                 throw new IllegalArgumentException("Payment mode not found: " + payment.getPaymentMode());
             }
-            BigDecimal tendered = payment.getAmountTendered() != null
-                    ? payment.getAmountTendered()
-                    : payment.getAmount();
-            bill.addPayment(mode, null, payment.getAmount(), tendered);
+            bill.addPayment(mode, null, bill.getTotal(), payment.getAmountPaying());
         }
         billService.save(bill);
         log.info("Added " + payments.size() + " payment(s) to bill " + bill.getUuid()

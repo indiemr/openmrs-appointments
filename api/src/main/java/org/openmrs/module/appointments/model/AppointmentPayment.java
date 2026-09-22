@@ -3,24 +3,15 @@ package org.openmrs.module.appointments.model;
 import java.math.BigDecimal;
 
 public class AppointmentPayment {
-    private BigDecimal amount;
-    private BigDecimal amountTendered;
+    private BigDecimal amountPaying;
     private String paymentMode;
 
-    public BigDecimal getAmount() {
-        return amount;
+    public BigDecimal getAmountPaying() {
+        return amountPaying;
     }
 
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
-    }
-
-    public BigDecimal getAmountTendered() {
-        return amountTendered;
-    }
-
-    public void setAmountTendered(BigDecimal amountTendered) {
-        this.amountTendered = amountTendered;
+    public void setAmountPaying(BigDecimal amountPaying) {
+        this.amountPaying = amountPaying;
     }
 
     public String getPaymentMode() {
