@@ -3,8 +3,10 @@ package org.openmrs.module.appointments.web.controller;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.module.appointments.model.Appointment;
+import org.openmrs.module.appointments.model.AppointmentPayment;
 import org.openmrs.module.appointments.model.AppointmentProvider;
 import org.openmrs.module.appointments.model.AppointmentSearchRequest;
+import org.openmrs.module.appointments.service.AppointmentPaymentService;
 import org.openmrs.module.appointments.service.AppointmentsService;
 import org.openmrs.module.appointments.util.DateUtil;
 import org.openmrs.module.appointments.web.contract.AppointmentStatusChangeRequest;
@@ -45,6 +47,9 @@ public class AppointmentsController extends BaseRestController {
     private AppointmentsService appointmentsService;
     @Autowired
     private AppointmentMapper appointmentMapper;
+
+    @Autowired
+    private AppointmentPaymentService appointmentPaymentService;
 
     @Autowired
     private AppointmentSearchValidator appointmentSearchValidator;
@@ -91,6 +96,24 @@ public class AppointmentsController extends BaseRestController {
         }
         List<Appointment> appointments = appointmentsService.search(appointmentSearchRequest);
         return appointmentMapper.constructResponse(appointments);
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/{appointmentUuid}/payments")
+    @ResponseBody
+    public ResponseEntity<Object> addPayments(@PathVariable("appointmentUuid") String appointmentUuid,
+                                              @RequestBody List<AppointmentPayment> payments) {
+        try {
+            Appointment appointment = appointmentsService.getAppointmentByUuid(appointmentUuid);
+            if (appointment == null) {
+                throw new RuntimeException("Appointment does not exist");
+            }
+            appointmentPaymentService.addPayments(appointmentUuid, payments);
+            Appointment updated = appointmentsService.getAppointmentByUuid(appointmentUuid);
+            return new ResponseEntity<>(appointmentMapper.constructResponse(updated), HttpStatus.OK);
+        } catch (RuntimeException e) {
+            log.error("Runtime error while trying to add payments for appointment " + appointmentUuid, e);
+            return new ResponseEntity<>(RestUtil.wrapErrorResponse(e, e.getMessage()), HttpStatus.BAD_REQUEST);
+        }
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/{appointmentUuid}/status-change")

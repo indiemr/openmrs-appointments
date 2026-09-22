@@ -13,9 +13,11 @@ import org.mockito.stubbing.Answer;
 import org.openmrs.Patient;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.openmrs.module.appointments.model.Appointment;
+import org.openmrs.module.appointments.model.AppointmentPayment;
 import org.openmrs.module.appointments.model.AppointmentSearchRequest;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.model.AppointmentStatus;
+import org.openmrs.module.appointments.service.AppointmentPaymentService;
 import org.openmrs.module.appointments.service.AppointmentsService;
 import org.openmrs.module.appointments.util.DateUtil;
 import org.openmrs.module.appointments.web.contract.AppointmentDefaultResponse;
@@ -27,8 +29,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.Errors;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -56,6 +60,9 @@ public class AppointmentsControllerTest {
 
     @Mock
     private AppointmentsService appointmentsService;
+
+    @Mock
+    private AppointmentPaymentService appointmentPaymentService;
 
     @Mock
     AppointmentSearchValidator appointmentSearchValidator;
@@ -312,5 +319,37 @@ public class AppointmentsControllerTest {
         ResponseEntity<Object> response = appointmentsController.sendReminderSms("missing");
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    }
+
+    @Test
+    public void shouldAddPaymentsForAppointment() {
+        String uuid = "appt-uuid";
+        Appointment appointment = new Appointment();
+        appointment.setUuid(uuid);
+        AppointmentDefaultResponse mapped = new AppointmentDefaultResponse();
+        AppointmentPayment payment = new AppointmentPayment();
+        payment.setAmountPaying(new BigDecimal("200"));
+        payment.setPaymentMode("cash-uuid");
+        List<AppointmentPayment> payments = Collections.singletonList(payment);
+
+        when(appointmentsService.getAppointmentByUuid(uuid)).thenReturn(appointment);
+        when(appointmentMapper.constructResponse(appointment)).thenReturn(mapped);
+
+        ResponseEntity<Object> response = appointmentsController.addPayments(uuid, payments);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(appointmentPaymentService, times(1)).addPayments(uuid, payments);
+        verify(appointmentMapper, times(1)).constructResponse(appointment);
+    }
+
+    @Test
+    public void shouldReturnBadRequestWhenAddingPaymentsForMissingAppointment() {
+        when(appointmentsService.getAppointmentByUuid("missing")).thenReturn(null);
+
+        ResponseEntity<Object> response = appointmentsController.addPayments(
+                "missing", Collections.emptyList());
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verify(appointmentPaymentService, never()).addPayments(anyString(), anyList());
     }
 }
