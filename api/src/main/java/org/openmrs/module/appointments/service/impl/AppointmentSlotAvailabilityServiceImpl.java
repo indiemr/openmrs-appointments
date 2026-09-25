@@ -3,6 +3,7 @@ package org.openmrs.module.appointments.service.impl;
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.Provider;
 import org.openmrs.module.appointments.dao.AppointmentDao;
+import org.openmrs.module.appointments.dao.AppointmentHoldDao;
 import org.openmrs.module.appointments.dao.AppointmentServiceDao;
 import org.openmrs.module.appointments.dao.AppointmentUnavailabilityDao;
 import org.openmrs.module.appointments.model.Appointment;
@@ -26,10 +27,15 @@ import java.util.List;
 public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAvailabilityService {
     private AppointmentServiceDao appointmentServiceDao;
     private AppointmentDao appointmentDao;
+    private AppointmentHoldDao appointmentHoldDao;
     private AppointmentUnavailabilityDao appointmentUnavailabilityDao;
 
     public void setAppointmentServiceDao(AppointmentServiceDao appointmentServiceDao) {
         this.appointmentServiceDao = appointmentServiceDao;
+    }
+
+    public void setAppointmentHoldDao(AppointmentHoldDao appointmentHoldDao) {
+        this.appointmentHoldDao = appointmentHoldDao;
     }
 
     public void setAppointmentDao(AppointmentDao appointmentDao) {
@@ -97,7 +103,8 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
         Provider provider = service.getProvider();
 
         String excludeAppointmentUuid = resolveExcludeAppointmentUuid(appointment, slotStart, slotEnd);
-        int booked = countBookedAppointments(service, provider, slotStart, slotEnd, excludeAppointmentUuid);
+        int booked = countBookedAppointments(service, provider, slotStart, slotEnd,
+                excludeAppointmentUuid, appointment.getConvertingHoldUuid());
         return booked >= capacity;
     }
 
@@ -195,7 +202,7 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
                 slot.setBooked(0);
                 slot.setAvailable(0);
             } else {
-                int booked = countBookedAppointments(service, provider, s, e, excludeAppointmentUuid);
+                int booked = countBookedAppointments(service, provider, s, e, excludeAppointmentUuid, null);
                 int available = Math.max(capacity - booked, 0);
 
                 if (available > 0 && isPatientBusy(patientAppointments, s, e)) {
@@ -224,12 +231,16 @@ public class AppointmentSlotAvailabilityServiceImpl implements AppointmentSlotAv
         return false;
     }
 
-    private int countBookedAppointments(AppointmentServiceDefinition service, Provider provider, Date slotStart, Date slotEnd, String excludeAppointmentUuid) {
+    private int countBookedAppointments(AppointmentServiceDefinition service, Provider provider, Date slotStart, Date slotEnd, String excludeAppointmentUuid, String excludeHoldUuid) {
         List<AppointmentStatus> statuses = AppointmentServiceCapacityUtil.SLOT_BLOCKING_STATUSES;
+        int booked;
         if (provider != null) {
-            return appointmentDao.countOverlappingAppointmentsForProvider(provider, slotStart, slotEnd, excludeAppointmentUuid, statuses);
+            booked = appointmentDao.countOverlappingAppointmentsForProvider(provider, slotStart, slotEnd, excludeAppointmentUuid, statuses);
+        } else {
+            booked = appointmentDao.countOverlappingAppointmentsForService(service, provider, slotStart, slotEnd, excludeAppointmentUuid, statuses);
         }
-        return appointmentDao.countOverlappingAppointmentsForService(service, provider, slotStart, slotEnd, excludeAppointmentUuid, statuses);
+        booked += appointmentHoldDao.countUnexpiredOverlapping(service, slotStart, slotEnd, excludeHoldUuid);
+        return booked;
     }
 
     private ServiceWeeklyAvailability resolveWeeklyAvailabilityForAppointment(AppointmentServiceDefinition service,

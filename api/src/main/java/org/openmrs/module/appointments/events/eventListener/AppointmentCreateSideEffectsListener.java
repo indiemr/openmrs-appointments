@@ -47,6 +47,8 @@ public class AppointmentCreateSideEffectsListener {
             log.error("Bill creation failed for appointment " + appointmentUuid, e);
         }
 
+        applyPayments(responseAppointment);
+
         // 2) Calendar/Meet in its own TX
         try {
             String meetingUrl = appointmentCalendarService.createCalendarEventForAppointment(appointmentUuid);
@@ -102,6 +104,8 @@ public class AppointmentCreateSideEffectsListener {
                     log.error("Bill sync failed for appointment " + appointmentUuid, e);
                 }
             }
+
+            applyPayments(responseAppointment);
         }
 
         // 4) Calendar sync (service skips date-only / non-confirmed)
@@ -113,6 +117,18 @@ public class AppointmentCreateSideEffectsListener {
             }
         } catch (Exception e) {
             log.error("Calendar sync failed for appointment " + appointmentUuid, e);
+        }
+    }
+
+    private void applyPayments(Appointment appointment) {
+        if (appointment.getPayments() == null || appointment.getPayments().isEmpty()) {
+            return;
+        }
+        String appointmentUuid = appointment.getUuid();
+        try {
+            appointmentBillingService.addPaymentsForAppointment(appointmentUuid, appointment.getPayments());
+        } catch (Exception e) {
+            log.error("Adding payments failed for appointment " + appointmentUuid, e);
         }
     }
 }

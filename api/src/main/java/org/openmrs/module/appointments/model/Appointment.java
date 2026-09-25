@@ -50,6 +50,11 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
     private Set<AppointmentReason> reasons;
 
     /**
+     * When converting a hold into an appointment, this hold uuid is excluded from slot occupancy.
+     */
+    private String convertingHoldUuid;
+
+    /**
      * Transient request-time flag. Not persisted. When false, booking/reschedule SMS is skipped.
      * When null, SMS follows global properties only.
      */
@@ -62,6 +67,12 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
      * When true, create a bill for this appointment after save.
      */
     private Boolean createBill;
+
+    /**
+     * Transient request-time payments. Not persisted.
+     * Applied to the appointment bill after create/sync.
+     */
+    private List<AppointmentPayment> payments;
 
     /**
      * This attribute is not a entity property. Just a placeholder for the clients to prepare response relevant  to notification
@@ -303,6 +314,14 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
         this.createBill = createBill;
     }
 
+    public List<AppointmentPayment> getPayments() {
+        return payments;
+    }
+
+    public void setPayments(List<AppointmentPayment> payments) {
+        this.payments = payments;
+    }
+
     public Boolean getDateOnly() {
         return dateOnly;
     }
@@ -355,6 +374,14 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
 
     public void setReasons(Set<AppointmentReason> reasons) {
         this.reasons = reasons;
+    }
+
+    public String getConvertingHoldUuid() {
+        return convertingHoldUuid;
+    }
+    
+    public void setConvertingHoldUuid(String convertingHoldUuid) {
+        this.convertingHoldUuid = convertingHoldUuid;
     }
 }
 
