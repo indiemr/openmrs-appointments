@@ -4,6 +4,7 @@ import org.openmrs.module.Module;
 import org.openmrs.module.ModuleFactory;
 import org.openmrs.module.billing.api.IBillService;
 import org.openmrs.module.billing.api.model.Bill;
+import org.openmrs.module.billing.api.model.BillStatus;
 import org.openmrs.module.billing.api.model.Payment;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -41,6 +42,7 @@ import org.openmrs.module.webservices.rest.web.response.ConversionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -52,6 +54,8 @@ import java.util.stream.Collectors;
 
 @Component
 public class AppointmentMapper {
+    static final String REFUND_PAYMENT_MODE_GP = "appointments.refundPaymentModeUuid";
+    static final String DEFAULT_REFUND_PAYMENT_MODE_UUID = "c2b28408-ba87-46cc-b0de-920293dca09f";
     @Autowired
     LocationService locationService;
 
@@ -377,8 +381,9 @@ public class AppointmentMapper {
             AppointmentBillSummary summary = new AppointmentBillSummary();
             summary.setUuid(bill.getUuid());
             summary.setAmount(bill.getTotal());
-            summary.setPaidAmount(bill.getTotalPayments());
-            summary.setStatus(bill.getStatus() != null ? bill.getStatus().name() : null);
+            BigDecimal paidAmount = resolveNetPaidAmount(bill);
+            summary.setPaidAmount(paidAmount);
+            summary.setStatus(resolveNetBillStatus(bill, paidAmount));
             summary.setPayments(mapBillPayments(bill));
             if (bill.getLineItems() != null && !bill.getLineItems().isEmpty()
                     && bill.getLineItems().get(0).getBillableService() != null) {
@@ -411,6 +416,60 @@ public class AppointmentMapper {
             result.add(item);
         }
         return result;
+    }
+
+    private BigDecimal resolveNetPaidAmount(Bill bill) {
+        BigDecimal net = BigDecimal.ZERO;
+        if (bill.getPayments() == null) {
+            return net;
+        }
+        for (Payment payment : bill.getPayments()) {
+            if (payment == null || Boolean.TRUE.equals(payment.getVoided())) {
+                continue;
+            }
+            BigDecimal tendered = payment.getAmountTendered() != null
+                    ? payment.getAmountTendered()
+                    : payment.getAmount();
+            if (tendered == null) {
+                continue;
+            }
+            net = isRefundPayment(payment) ? net.subtract(tendered) : net.add(tendered);
+        }
+        return net.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : net;
+    }
+
+    private String resolveNetBillStatus(Bill bill, BigDecimal paidAmount) {
+        BillStatus stored = bill.getStatus();
+        if (stored == BillStatus.CANCELLED || stored == BillStatus.ADJUSTED || stored == BillStatus.EXEMPTED) {
+            return stored.name();
+        }
+        BigDecimal total = bill.getTotal() != null ? bill.getTotal() : BigDecimal.ZERO;
+        BigDecimal paid = paidAmount != null ? paidAmount : BigDecimal.ZERO;
+        if (paid.compareTo(BigDecimal.ZERO) <= 0) {
+            return BillStatus.PENDING.name();
+        }
+        if (paid.compareTo(total) >= 0) {
+            return BillStatus.PAID.name();
+        }
+        return BillStatus.POSTED.name();
+    }
+
+    private boolean isRefundPayment(Payment payment) {
+        if (payment.getInstanceType() == null || StringUtils.isBlank(payment.getInstanceType().getUuid())) {
+            return false;
+        }
+        String paymentModeUuid = payment.getInstanceType().getUuid();
+        if (StringUtils.equals(DEFAULT_REFUND_PAYMENT_MODE_UUID, paymentModeUuid)) {
+            return true;
+        }
+        try {
+            String refundModeUuid = Context.getAdministrationService()
+                    .getGlobalProperty(REFUND_PAYMENT_MODE_GP);
+            return StringUtils.isNotBlank(refundModeUuid)
+                    && StringUtils.equals(refundModeUuid, paymentModeUuid);
+        } catch (Exception e) {
+            return false;
+        }
     }
     
     private boolean isBillingModuleStarted() {
