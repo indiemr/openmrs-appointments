@@ -65,7 +65,7 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
             throw new IllegalArgumentException("Appointment has no patient");
         }
 
-        IBillableItemsService billableItemsService = Context.getService(IBillableItemsService.class);
+        IBillableItemsService billableItemsService = billableItemsService();
         BillableService billableService = billableItemsService.getByUuid(service.getBillableServiceUuid());
         if (billableService == null) {
             throw new IllegalArgumentException("Billable service not found: " + service.getBillableServiceUuid());
@@ -99,7 +99,7 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
         lineItem.setLineItemOrder(0);
         bill.addLineItem(lineItem);
 
-        Bill savedBill = Context.getService(IBillService.class).save(bill);
+        Bill savedBill = billService().save(bill);
         appointment.setBillUuid(savedBill.getUuid());
         appointmentDao.save(appointment);
         log.info("Created bill " + savedBill.getUuid() + " for appointment " + appointment.getUuid());
@@ -117,14 +117,14 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
             return;
         }
 
-        IBillService billService = Context.getService(IBillService.class);
+        IBillService billService = billService();
         Bill bill = billService.getByUuid(appointment.getBillUuid());
         if (bill == null || Boolean.TRUE.equals(bill.getVoided())) {
             log.warn("Bill missing/voided for appointment " + appointmentUuid + "; skipping payments");
             return;
         }
 
-        IPaymentModeService paymentModeService = Context.getService(IPaymentModeService.class);
+        IPaymentModeService paymentModeService = paymentModeService();
         for (AppointmentPayment payment : payments) {
             if (payment == null || payment.getAmountPaying() == null || StringUtils.isBlank(payment.getPaymentMode())) {
                 throw new IllegalArgumentException("Each payment requires amountPaying and paymentMode");
@@ -152,7 +152,7 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
         }
 
 
-        IBillService billService = Context.getService(IBillService.class);
+        IBillService billService = billService();
         Bill bill = billService.getByUuid(appointment.getBillUuid());
 
         if (bill == null || Boolean.TRUE.equals(bill.getVoided())) {
@@ -182,7 +182,7 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
             return appointment.getBillUuid();
         }
 
-        IBillService billService = Context.getService(IBillService.class);
+        IBillService billService = billService();
         Bill oldBill = billService.getByUuid(appointment.getBillUuid());
 
         // Bill missing or already voided → create fresh bill for current service
@@ -211,7 +211,7 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
 
     private String updateBillLineItemForServiceChange(Appointment appointment, Bill bill, String oldBillableServiceUuid) {
         AppointmentServiceDefinition service = appointment.getService();
-        IBillableItemsService billableItemsService = Context.getService(IBillableItemsService.class);
+        IBillableItemsService billableItemsService = billableItemsService();
         BillableService newBillableService = billableItemsService.getByUuid(service.getBillableServiceUuid());
         if (newBillableService == null) {
             throw new IllegalArgumentException("Billable service not found: " + service.getBillableServiceUuid());
@@ -231,7 +231,7 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
 
         bill.synchronizeBillStatus();
 
-        IBillService billService = Context.getService(IBillService.class);
+        IBillService billService = billService();
         Bill savedBill = billService.save(bill);
         log.info("Updated bill line item on bill " + savedBill.getUuid()
                 + " for appointment " + appointment.getUuid()
@@ -293,8 +293,8 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
             }
         }
         
-        ProviderService providerService = Context.getProviderService();
-        User user = Context.getAuthenticatedUser();
+        ProviderService providerService = providerService();
+        User user = authenticatedUser();
         // 3) Return logged in provider as cashier
         if (user != null && user.getPerson() != null) {
             Collection<Provider> providers = providerService.getProvidersByPerson(user.getPerson(), false);
@@ -306,7 +306,7 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
     }
 
     private CashPoint resolveCashPoint(Location location) {
-        ICashPointService cashPointService = Context.getService(ICashPointService.class);
+        ICashPointService cashPointService = cashPointService();
         if (location != null) {
             List<CashPoint> cashPoints = cashPointService.getCashPointsByLocation(location, false);
             if (cashPoints != null && !cashPoints.isEmpty()) {
@@ -333,6 +333,30 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
                 .map(BillableService::getUuid)
                 .findFirst()
                 .orElse(null);
+    }
+
+    IBillService billService() {
+        return Context.getService(IBillService.class);
+    }
+
+    IBillableItemsService billableItemsService() {
+        return Context.getService(IBillableItemsService.class);
+    }
+
+    ICashPointService cashPointService() {
+        return Context.getService(ICashPointService.class);
+    }
+
+    IPaymentModeService paymentModeService() {
+        return Context.getService(IPaymentModeService.class);
+    }
+
+    ProviderService providerService() {
+        return Context.getProviderService();
+    }
+
+    User authenticatedUser() {
+        return Context.getAuthenticatedUser();
     }
 
     private void clearBillUuidFromAppointment(String appointmentUuid) {
