@@ -5,6 +5,7 @@ import org.openmrs.Patient;
 import org.openmrs.api.APIException;
 import org.openmrs.api.PatientService;
 import org.openmrs.module.appointments.model.AppointmentHold;
+import org.openmrs.module.appointments.model.AppointmentHoldStatus;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.service.AppointmentServiceDefinitionService;
 import org.openmrs.module.appointments.web.contract.AppointmentHoldRequest;
@@ -55,7 +56,7 @@ public class AppointmentHoldMapper {
         response.setStartDateTime(hold.getStartDateTime());
         response.setEndDateTime(hold.getEndDateTime());
         response.setExpiresAt(hold.getExpiresAt());
-        if (hold.getExpiresAt() != null) {
+        if (hold.getExpiresAt() != null && AppointmentHoldStatus.HELD.equals(hold.getStatus())) {
             long seconds = (hold.getExpiresAt().getTime() - System.currentTimeMillis()) / 1000L;
             response.setExpiresInSeconds(Math.max(seconds, 0));
         }

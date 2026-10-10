@@ -1,5 +1,6 @@
 package org.openmrs.module.appointments.service.impl;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Provider;
@@ -98,6 +99,26 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
         }
         AppointmentHold hold = appointmentHoldDao.getByUuid(holdUuid);
         log.info("Consumed appointment hold " + holdUuid);
+        return hold;
+    }
+
+    @Override
+    public AppointmentHold releaseHold(String holdUuid) {
+        if (StringUtils.isBlank(holdUuid)) {
+            throw new APIException("holdUuid is required");
+        }
+        // Update before load so the session doesn't hand back a stale HELD entity
+        boolean released = appointmentHoldDao.releaseIfHeld(holdUuid, Context.getAuthenticatedUser(), new Date());
+        AppointmentHold hold = appointmentHoldDao.getByUuid(holdUuid);
+        if (hold == null) {
+            return null;
+        }
+        if (!released && AppointmentHoldStatus.CONSUMED.equals(hold.getStatus())) {
+            throw new APIException("Appointment hold has already been used to book an appointment. Cancel the appointment instead.");
+        }
+        if (released) {
+            log.info("Released appointment hold " + holdUuid);
+        }
         return hold;
     }
 

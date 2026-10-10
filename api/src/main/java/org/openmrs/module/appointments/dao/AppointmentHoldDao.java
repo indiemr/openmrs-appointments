@@ -1,5 +1,6 @@
 package org.openmrs.module.appointments.dao;
 
+import org.openmrs.User;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentHold;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
@@ -20,6 +21,8 @@ public interface AppointmentHoldDao {
     boolean consumeIfActive(String holdUuid, Appointment appointment);
 
     boolean expireIfDue(String holdUuid);
+
+    boolean releaseIfHeld(String holdUuid, User releasedBy, Date releasedAt);
 
     int expireAllDue();
 

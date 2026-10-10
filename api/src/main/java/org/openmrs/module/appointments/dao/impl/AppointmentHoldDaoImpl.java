@@ -4,6 +4,7 @@ import org.hibernate.Criteria;
 import org.hibernate.Query;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Restrictions;
+import org.openmrs.User;
 import org.openmrs.module.appointments.dao.AppointmentHoldDao;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentHold;
@@ -82,6 +83,19 @@ public class AppointmentHoldDaoImpl implements AppointmentHoldDao {
                 "update AppointmentHold h set h.status = :expired "
                         + "where h.uuid = :uuid and h.status = :held and h.expiresAt <= current_timestamp()");
         query.setParameter("expired", AppointmentHoldStatus.EXPIRED);
+        query.setParameter("uuid", holdUuid);
+        query.setParameter("held", AppointmentHoldStatus.HELD);
+        return query.executeUpdate() == 1;
+    }
+
+    @Override
+    public boolean releaseIfHeld(String holdUuid, User releasedBy, Date releasedAt) {
+        Query query = sessionFactory.getCurrentSession().createQuery(
+                "update AppointmentHold h set h.status = :released, h.changedBy = :changedBy, h.dateChanged = :dateChanged "
+                        + "where h.uuid = :uuid and h.status = :held");
+        query.setParameter("released", AppointmentHoldStatus.RELEASED);
+        query.setParameter("changedBy", releasedBy);
+        query.setParameter("dateChanged", releasedAt);
         query.setParameter("uuid", holdUuid);
         query.setParameter("held", AppointmentHoldStatus.HELD);
         return query.executeUpdate() == 1;
