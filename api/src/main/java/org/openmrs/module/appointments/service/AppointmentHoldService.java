@@ -28,6 +28,10 @@ public interface AppointmentHoldService {
 
     @Transactional
     @Authorized({MANAGE_APPOINTMENTS})
+    AppointmentHold extendHold(String holdUuid);
+
+    @Transactional
+    @Authorized({MANAGE_APPOINTMENTS})
     int expireDueHolds();
 
     @Transactional(readOnly = true)

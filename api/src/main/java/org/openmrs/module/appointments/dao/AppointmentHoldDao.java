@@ -24,6 +24,8 @@ public interface AppointmentHoldDao {
 
     boolean releaseIfHeld(String holdUuid, User releasedBy, Date releasedAt);
 
+    boolean extendIfActive(AppointmentHold hold, Date newExpiresAt, User extendedBy, Date extendedAt);
+
     int expireAllDue();
 
     boolean acquireSlotLock(String lockKey, int timeoutSeconds);

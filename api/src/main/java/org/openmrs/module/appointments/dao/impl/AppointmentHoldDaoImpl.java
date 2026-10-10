@@ -102,6 +102,25 @@ public class AppointmentHoldDaoImpl implements AppointmentHoldDao {
     }
 
     @Override
+    public boolean extendIfActive(AppointmentHold hold, Date newExpiresAt, User extendedBy, Date extendedAt) {
+        Query query = sessionFactory.getCurrentSession().createQuery(
+                "update AppointmentHold h set h.expiresAt = :newExpiresAt, h.changedBy = :changedBy, h.dateChanged = :dateChanged "
+                        + "where h.uuid = :uuid and h.status = :held and h.expiresAt > current_timestamp() "
+                        + "and h.expiresAt < :newExpiresAt");
+        query.setParameter("newExpiresAt", newExpiresAt);
+        query.setParameter("changedBy", extendedBy);
+        query.setParameter("dateChanged", extendedAt);
+        query.setParameter("uuid", hold.getUuid());
+        query.setParameter("held", AppointmentHoldStatus.HELD);
+        boolean extended = query.executeUpdate() == 1;
+        if (extended) {
+            // Bulk update bypasses the session; reload so the caller sees the new expiry
+            sessionFactory.getCurrentSession().refresh(hold);
+        }
+        return extended;
+    }
+
+    @Override
     public int expireAllDue() {
         Query query = sessionFactory.getCurrentSession().createQuery(
                 "update AppointmentHold h set h.status = :expired "

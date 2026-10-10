@@ -27,6 +27,10 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
 
     public static final String GP_HOLD_MINUTES = "appointments.holdMinutes";
     public static final int DEFAULT_HOLD_MINUTES = 7;
+    public static final String GP_HOLD_EXTEND_MINUTES = "appointments.holdExtendMinutes";
+    public static final int DEFAULT_HOLD_EXTEND_MINUTES = 7;
+    public static final String GP_HOLD_MAX_MINUTES = "appointments.holdMaxMinutes";
+    public static final int DEFAULT_HOLD_MAX_MINUTES = 30;
     private static final int LOCK_TIMEOUT_SECONDS = 5;
 
     private final Log log = LogFactory.getLog(getClass());
@@ -123,6 +127,39 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
     }
 
     @Override
+    public AppointmentHold extendHold(String holdUuid) {
+        if (StringUtils.isBlank(holdUuid)) {
+            throw new APIException("holdUuid is required");
+        }
+        AppointmentHold hold = appointmentHoldDao.getByUuid(holdUuid);
+        if (hold == null) {
+            return null;
+        }
+        Date now = new Date();
+        if (!AppointmentHoldStatus.HELD.equals(hold.getStatus()) || !hold.getExpiresAt().after(now)) {
+            throw new APIException("Appointment hold has expired or is no longer active. Please hold the slot again.");
+        }
+
+        // New expiry is now + extend window, never beyond dateCreated + max hold time
+        Date maxExpiresAt = new Date(hold.getDateCreated().getTime() + holdMaxMinutes() * 60_000L);
+        if (!hold.getExpiresAt().before(maxExpiresAt)) {
+            throw new APIException("Maximum hold time of " + holdMaxMinutes() + " minutes reached for this slot.");
+        }
+        Date requested = new Date(now.getTime() + holdExtendMinutes() * 60_000L);
+        Date newExpiresAt = requested.before(maxExpiresAt) ? requested : maxExpiresAt;
+        if (!newExpiresAt.after(hold.getExpiresAt())) {
+            // Already extended past this point (e.g. repeated call); nothing to do
+            return hold;
+        }
+
+        if (!appointmentHoldDao.extendIfActive(hold, newExpiresAt, Context.getAuthenticatedUser(), now)) {
+            throw new APIException("Appointment hold has expired or is no longer active. Please hold the slot again.");
+        }
+        log.info("Extended appointment hold " + holdUuid + " until " + newExpiresAt);
+        return hold;
+    }
+
+    @Override
     public boolean expireHold(String holdUuid) {
         return appointmentHoldDao.expireIfDue(holdUuid);
     }
@@ -147,13 +184,25 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
     }
 
     private int holdMinutes() {
+        return minutesProperty(GP_HOLD_MINUTES, DEFAULT_HOLD_MINUTES);
+    }
+
+    private int holdExtendMinutes() {
+        return minutesProperty(GP_HOLD_EXTEND_MINUTES, DEFAULT_HOLD_EXTEND_MINUTES);
+    }
+
+    private int holdMaxMinutes() {
+        return minutesProperty(GP_HOLD_MAX_MINUTES, DEFAULT_HOLD_MAX_MINUTES);
+    }
+
+    private int minutesProperty(String property, int defaultMinutes) {
         String value = Context.getAdministrationService()
-                .getGlobalProperty(GP_HOLD_MINUTES, String.valueOf(DEFAULT_HOLD_MINUTES));
+                .getGlobalProperty(property, String.valueOf(defaultMinutes));
         try {
             int parsed = Integer.parseInt(value.trim());
-            return parsed > 0 ? parsed : DEFAULT_HOLD_MINUTES;
+            return parsed > 0 ? parsed : defaultMinutes;
         } catch (Exception e) {
-            return DEFAULT_HOLD_MINUTES;
+            return defaultMinutes;
         }
     }
 

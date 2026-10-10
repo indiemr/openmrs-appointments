@@ -190,6 +190,23 @@
 		<defaultValue>15</defaultValue>
 		<description>Default appointment slot duration in minutes when service/service type duration is not configured</description>
 	</globalProperty>
+
+	<globalProperty>
+		<property>appointments.holdMinutes</property>
+		<defaultValue>7</defaultValue>
+		<description>Minutes an appointment slot hold stays active after it is created</description>
+	</globalProperty>
+	<globalProperty>
+		<property>appointments.holdExtendMinutes</property>
+		<defaultValue>7</defaultValue>
+		<description>Minutes from now that an active slot hold's expiry is moved to on each extend call</description>
+	</globalProperty>
+	<globalProperty>
+		<property>appointments.holdMaxMinutes</property>
+		<defaultValue>30</defaultValue>
+		<description>Maximum total minutes a slot hold can stay active, counted from when it was created; extensions never go beyond this</description>
+	</globalProperty>
+
 	
 	<globalProperty>
 		<property>sms.enableTeleconsultationSMSAlert</property>
