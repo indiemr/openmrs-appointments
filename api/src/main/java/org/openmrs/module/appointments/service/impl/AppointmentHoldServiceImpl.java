@@ -3,6 +3,7 @@ package org.openmrs.module.appointments.service.impl;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.Patient;
 import org.openmrs.Provider;
 import org.openmrs.api.APIException;
 import org.openmrs.api.context.Context;
@@ -31,6 +32,11 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
     public static final int DEFAULT_HOLD_EXTEND_MINUTES = 7;
     public static final String GP_HOLD_MAX_MINUTES = "appointments.holdMaxMinutes";
     public static final int DEFAULT_HOLD_MAX_MINUTES = 30;
+    public static final String GP_HOLD_MAX_ACTIVE_PER_PATIENT = "appointments.holdMaxActivePerPatient";
+    public static final int DEFAULT_HOLD_MAX_ACTIVE_PER_PATIENT = 2;
+    public static final String GP_HOLD_MAX_UNUSED_PER_PATIENT_PER_DAY = "appointments.holdMaxUnusedPerPatientPerDay";
+    public static final int DEFAULT_HOLD_MAX_UNUSED_PER_PATIENT_PER_DAY = 5;
+    private static final long ONE_DAY_MILLIS = 24L * 60 * 60 * 1000;
     private static final int LOCK_TIMEOUT_SECONDS = 5;
 
     private final Log log = LogFactory.getLog(getClass());
@@ -56,6 +62,32 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
             hold.setEndDateTime(calendar.getTime());
         }
 
+        // Patient lock first, then slot lock: fixed order avoids deadlocks between concurrent holds
+        String patientLockKey = patientLockKey(hold.getPatient());
+        if (!appointmentHoldDao.acquireSlotLock(patientLockKey, LOCK_TIMEOUT_SECONDS)) {
+            throw new APIException("Could not lock slot. Please retry.");
+        }
+        try {
+            validatePatientHoldLimits(hold.getPatient());
+            return holdSlot(hold);
+        } finally {
+            appointmentHoldDao.releaseSlotLock(patientLockKey);
+        }
+    }
+
+    private void validatePatientHoldLimits(Patient patient) {
+        int maxActive = holdMaxActivePerPatient();
+        if (appointmentHoldDao.countActiveForPatient(patient) >= maxActive) {
+            throw new APIException("You already have " + maxActive
+                    + " slot(s) on hold. Book or release a held slot before holding another.");
+        }
+        Date since = new Date(System.currentTimeMillis() - ONE_DAY_MILLIS);
+        if (appointmentHoldDao.countUnusedForPatientSince(patient, since) >= holdMaxUnusedPerPatientPerDay()) {
+            throw new APIException("Too many unused slot holds in the last 24 hours. Please try again later.");
+        }
+    }
+
+    private AppointmentHold holdSlot(AppointmentHold hold) {
         String lockKey = slotLockKey(hold.getService(), hold.getStartDateTime());
         if (!appointmentHoldDao.acquireSlotLock(lockKey, LOCK_TIMEOUT_SECONDS)) {
             throw new APIException("Could not lock slot. Please retry.");
@@ -184,25 +216,33 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
     }
 
     private int holdMinutes() {
-        return minutesProperty(GP_HOLD_MINUTES, DEFAULT_HOLD_MINUTES);
+        return positiveIntProperty(GP_HOLD_MINUTES, DEFAULT_HOLD_MINUTES);
     }
 
     private int holdExtendMinutes() {
-        return minutesProperty(GP_HOLD_EXTEND_MINUTES, DEFAULT_HOLD_EXTEND_MINUTES);
+        return positiveIntProperty(GP_HOLD_EXTEND_MINUTES, DEFAULT_HOLD_EXTEND_MINUTES);
     }
 
     private int holdMaxMinutes() {
-        return minutesProperty(GP_HOLD_MAX_MINUTES, DEFAULT_HOLD_MAX_MINUTES);
+        return positiveIntProperty(GP_HOLD_MAX_MINUTES, DEFAULT_HOLD_MAX_MINUTES);
     }
 
-    private int minutesProperty(String property, int defaultMinutes) {
+    private int holdMaxActivePerPatient() {
+        return positiveIntProperty(GP_HOLD_MAX_ACTIVE_PER_PATIENT, DEFAULT_HOLD_MAX_ACTIVE_PER_PATIENT);
+    }
+
+    private int holdMaxUnusedPerPatientPerDay() {
+        return positiveIntProperty(GP_HOLD_MAX_UNUSED_PER_PATIENT_PER_DAY, DEFAULT_HOLD_MAX_UNUSED_PER_PATIENT_PER_DAY);
+    }
+
+    private int positiveIntProperty(String property, int defaultValue) {
         String value = Context.getAdministrationService()
-                .getGlobalProperty(property, String.valueOf(defaultMinutes));
+                .getGlobalProperty(property, String.valueOf(defaultValue));
         try {
             int parsed = Integer.parseInt(value.trim());
-            return parsed > 0 ? parsed : defaultMinutes;
+            return parsed > 0 ? parsed : defaultValue;
         } catch (Exception e) {
-            return defaultMinutes;
+            return defaultValue;
         }
     }
 
@@ -218,5 +258,9 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
 
     private String slotLockKey(AppointmentServiceDefinition service, Date start) {
         return "ah-" + service.getAppointmentServiceId() + "-" + start.getTime();
+    }
+
+    private String patientLockKey(Patient patient) {
+        return "ahp-" + patient.getPatientId();
     }
 }

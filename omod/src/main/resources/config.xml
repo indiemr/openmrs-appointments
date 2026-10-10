@@ -190,6 +190,16 @@
 		<defaultValue>15</defaultValue>
 		<description>Default appointment slot duration in minutes when service/service type duration is not configured</description>
 	</globalProperty>
+	<globalProperty>
+		<property>appointments.holdMaxActivePerPatient</property>
+		<defaultValue>2</defaultValue>
+		<description>Maximum number of slot holds a patient can have active (held and not expired) at the same time, across all services and dates</description>
+	</globalProperty>
+	<globalProperty>
+		<property>appointments.holdMaxUnusedPerPatientPerDay</property>
+		<defaultValue>5</defaultValue>
+		<description>Maximum number of slot holds a patient can let expire or release without booking in a rolling 24 hours; further holds are refused until older ones fall out of the window</description>
+	</globalProperty>
 
 	<globalProperty>
 		<property>appointments.holdMinutes</property>

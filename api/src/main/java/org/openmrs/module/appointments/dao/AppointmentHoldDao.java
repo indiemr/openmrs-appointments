@@ -1,5 +1,6 @@
 package org.openmrs.module.appointments.dao;
 
+import org.openmrs.Patient;
 import org.openmrs.User;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentHold;
@@ -17,6 +18,10 @@ public interface AppointmentHoldDao {
                                   Date slotStart,
                                   Date slotEnd, 
                                   String excludeHoldUuid);
+
+    int countActiveForPatient(Patient patient);
+
+    int countUnusedForPatientSince(Patient patient, Date since);
 
     boolean consumeIfActive(String holdUuid, Appointment appointment);
 

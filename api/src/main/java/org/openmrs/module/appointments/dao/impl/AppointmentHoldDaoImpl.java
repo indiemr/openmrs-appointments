@@ -4,6 +4,7 @@ import org.hibernate.Criteria;
 import org.hibernate.Query;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Restrictions;
+import org.openmrs.Patient;
 import org.openmrs.User;
 import org.openmrs.module.appointments.dao.AppointmentHoldDao;
 import org.openmrs.module.appointments.model.Appointment;
@@ -13,6 +14,7 @@ import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.springframework.transaction.annotation.Transactional;
 import org.apache.commons.lang.StringUtils;
 
+import java.util.Arrays;
 import java.util.Date;
 
 public class AppointmentHoldDaoImpl implements AppointmentHoldDao {
@@ -61,6 +63,33 @@ public class AppointmentHoldDaoImpl implements AppointmentHoldDao {
         if (StringUtils.isNotBlank(excludeHoldUuid)) {
             query.setParameter("excludeUuid", excludeHoldUuid);
         }
+        Number count = (Number) query.uniqueResult();
+        return count != null ? count.intValue() : 0;
+    }
+
+    @Override
+    public int countActiveForPatient(Patient patient) {
+        Query query = sessionFactory.getCurrentSession().createQuery(
+                "select count(h) from AppointmentHold h "
+                        + "where h.voided = false and h.patient = :patient "
+                        + "and h.status = :held and h.expiresAt > current_timestamp()");
+        query.setParameter("patient", patient);
+        query.setParameter("held", AppointmentHoldStatus.HELD);
+        Number count = (Number) query.uniqueResult();
+        return count != null ? count.intValue() : 0;
+    }
+
+    @Override
+    public int countUnusedForPatientSince(Patient patient, Date since) {
+        // Unused = ended without a booking; HELD rows past expiry count too since no job sweeps them
+        Query query = sessionFactory.getCurrentSession().createQuery(
+                "select count(h) from AppointmentHold h "
+                        + "where h.voided = false and h.patient = :patient and h.dateCreated >= :since "
+                        + "and (h.status in (:ended) or (h.status = :held and h.expiresAt <= current_timestamp()))");
+        query.setParameter("patient", patient);
+        query.setParameter("since", since);
+        query.setParameterList("ended", Arrays.asList(AppointmentHoldStatus.EXPIRED, AppointmentHoldStatus.RELEASED));
+        query.setParameter("held", AppointmentHoldStatus.HELD);
         Number count = (Number) query.uniqueResult();
         return count != null ? count.intValue() : 0;
     }
