@@ -12,3 +12,4 @@ omod/.project
 omod/.settings/
 target/
 .DS_Store
+*.md
