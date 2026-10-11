@@ -14,6 +14,8 @@ public interface AppointmentHoldDao {
 
     AppointmentHold getByUuid(String uuid);
 
+    void refresh(AppointmentHold hold);
+
     int countUnexpiredOverlapping(AppointmentServiceDefinition service,
                                   Date slotStart,
                                   Date slotEnd, 

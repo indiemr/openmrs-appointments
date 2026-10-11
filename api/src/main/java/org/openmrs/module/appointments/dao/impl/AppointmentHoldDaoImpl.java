@@ -41,6 +41,11 @@ public class AppointmentHoldDaoImpl implements AppointmentHoldDao {
     }
 
     @Override
+    public void refresh(AppointmentHold hold) {
+        sessionFactory.getCurrentSession().refresh(hold);
+    }
+
+    @Override
     public int countUnexpiredOverlapping(AppointmentServiceDefinition service,
                                         Date slotStart,
                                         Date slotEnd,

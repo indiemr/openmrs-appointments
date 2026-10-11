@@ -34,7 +34,8 @@ public interface AppointmentHoldService {
     @Authorized({MANAGE_APPOINTMENTS})
     int expireDueHolds();
 
-    @Transactional(readOnly = true)
+    // Not read-only: an overdue HELD hold is marked EXPIRED when read
+    @Transactional
     @Authorized({VIEW_APPOINTMENTS})
     AppointmentHold getByUuid(String uuid);
 }

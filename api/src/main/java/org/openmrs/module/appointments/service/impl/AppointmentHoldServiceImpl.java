@@ -205,7 +205,15 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
 
     @Override
     public AppointmentHold getByUuid(String uuid) {
-        return appointmentHoldDao.getByUuid(uuid);
+        AppointmentHold hold = appointmentHoldDao.getByUuid(uuid);
+        if (hold != null && AppointmentHoldStatus.HELD.equals(hold.getStatus())
+                && hold.getExpiresAt() != null && !hold.getExpiresAt().after(new Date())) {
+            if (appointmentHoldDao.expireIfDue(uuid)) {
+                // Bulk update bypasses the session; reload so the caller sees EXPIRED
+                appointmentHoldDao.refresh(hold);
+            }
+        }
+        return hold;
     }
 
     private void validateForCreate(AppointmentHold hold) {
