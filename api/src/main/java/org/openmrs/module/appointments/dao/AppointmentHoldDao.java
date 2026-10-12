@@ -1,5 +1,7 @@
 package org.openmrs.module.appointments.dao;
 
+import org.openmrs.Patient;
+import org.openmrs.User;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentHold;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
@@ -12,14 +14,24 @@ public interface AppointmentHoldDao {
 
     AppointmentHold getByUuid(String uuid);
 
+    void refresh(AppointmentHold hold);
+
     int countUnexpiredOverlapping(AppointmentServiceDefinition service,
                                   Date slotStart,
                                   Date slotEnd, 
                                   String excludeHoldUuid);
 
+    int countActiveForPatient(Patient patient);
+
+    int countUnusedForPatientSince(Patient patient, Date since);
+
     boolean consumeIfActive(String holdUuid, Appointment appointment);
 
     boolean expireIfDue(String holdUuid);
+
+    boolean releaseIfHeld(String holdUuid, User releasedBy, Date releasedAt);
+
+    boolean extendIfActive(AppointmentHold hold, Date newExpiresAt, User extendedBy, Date extendedAt);
 
     int expireAllDue();
 

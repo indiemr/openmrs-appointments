@@ -4,6 +4,8 @@ import org.hibernate.Criteria;
 import org.hibernate.Query;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Restrictions;
+import org.openmrs.Patient;
+import org.openmrs.User;
 import org.openmrs.module.appointments.dao.AppointmentHoldDao;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentHold;
@@ -12,6 +14,7 @@ import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.springframework.transaction.annotation.Transactional;
 import org.apache.commons.lang.StringUtils;
 
+import java.util.Arrays;
 import java.util.Date;
 
 public class AppointmentHoldDaoImpl implements AppointmentHoldDao {
@@ -35,6 +38,11 @@ public class AppointmentHoldDaoImpl implements AppointmentHoldDao {
                 .createCriteria(AppointmentHold.class);
         criteria.add(Restrictions.eq("uuid", uuid));
         return (AppointmentHold) criteria.uniqueResult();
+    }
+
+    @Override
+    public void refresh(AppointmentHold hold) {
+        sessionFactory.getCurrentSession().refresh(hold);
     }
 
     @Override
@@ -65,6 +73,33 @@ public class AppointmentHoldDaoImpl implements AppointmentHoldDao {
     }
 
     @Override
+    public int countActiveForPatient(Patient patient) {
+        Query query = sessionFactory.getCurrentSession().createQuery(
+                "select count(h) from AppointmentHold h "
+                        + "where h.voided = false and h.patient = :patient "
+                        + "and h.status = :held and h.expiresAt > current_timestamp()");
+        query.setParameter("patient", patient);
+        query.setParameter("held", AppointmentHoldStatus.HELD);
+        Number count = (Number) query.uniqueResult();
+        return count != null ? count.intValue() : 0;
+    }
+
+    @Override
+    public int countUnusedForPatientSince(Patient patient, Date since) {
+        // Unused = ended without a booking; HELD rows past expiry count too since no job sweeps them
+        Query query = sessionFactory.getCurrentSession().createQuery(
+                "select count(h) from AppointmentHold h "
+                        + "where h.voided = false and h.patient = :patient and h.dateCreated >= :since "
+                        + "and (h.status in (:ended) or (h.status = :held and h.expiresAt <= current_timestamp()))");
+        query.setParameter("patient", patient);
+        query.setParameter("since", since);
+        query.setParameterList("ended", Arrays.asList(AppointmentHoldStatus.EXPIRED, AppointmentHoldStatus.RELEASED));
+        query.setParameter("held", AppointmentHoldStatus.HELD);
+        Number count = (Number) query.uniqueResult();
+        return count != null ? count.intValue() : 0;
+    }
+
+    @Override
     public boolean consumeIfActive(String holdUuid, Appointment appointment) {
         Query query = sessionFactory.getCurrentSession().createQuery(
                 "update AppointmentHold h set h.status = :consumed, h.appointment = :appointment "
@@ -85,6 +120,38 @@ public class AppointmentHoldDaoImpl implements AppointmentHoldDao {
         query.setParameter("uuid", holdUuid);
         query.setParameter("held", AppointmentHoldStatus.HELD);
         return query.executeUpdate() == 1;
+    }
+
+    @Override
+    public boolean releaseIfHeld(String holdUuid, User releasedBy, Date releasedAt) {
+        Query query = sessionFactory.getCurrentSession().createQuery(
+                "update AppointmentHold h set h.status = :released, h.changedBy = :changedBy, h.dateChanged = :dateChanged "
+                        + "where h.uuid = :uuid and h.status = :held");
+        query.setParameter("released", AppointmentHoldStatus.RELEASED);
+        query.setParameter("changedBy", releasedBy);
+        query.setParameter("dateChanged", releasedAt);
+        query.setParameter("uuid", holdUuid);
+        query.setParameter("held", AppointmentHoldStatus.HELD);
+        return query.executeUpdate() == 1;
+    }
+
+    @Override
+    public boolean extendIfActive(AppointmentHold hold, Date newExpiresAt, User extendedBy, Date extendedAt) {
+        Query query = sessionFactory.getCurrentSession().createQuery(
+                "update AppointmentHold h set h.expiresAt = :newExpiresAt, h.changedBy = :changedBy, h.dateChanged = :dateChanged "
+                        + "where h.uuid = :uuid and h.status = :held and h.expiresAt > current_timestamp() "
+                        + "and h.expiresAt < :newExpiresAt");
+        query.setParameter("newExpiresAt", newExpiresAt);
+        query.setParameter("changedBy", extendedBy);
+        query.setParameter("dateChanged", extendedAt);
+        query.setParameter("uuid", hold.getUuid());
+        query.setParameter("held", AppointmentHoldStatus.HELD);
+        boolean extended = query.executeUpdate() == 1;
+        if (extended) {
+            // Bulk update bypasses the session; reload so the caller sees the new expiry
+            sessionFactory.getCurrentSession().refresh(hold);
+        }
+        return extended;
     }
 
     @Override

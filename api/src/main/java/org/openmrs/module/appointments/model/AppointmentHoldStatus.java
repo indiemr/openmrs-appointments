@@ -4,5 +4,6 @@ public enum AppointmentHoldStatus {
     HELD,
     CONSUMED,
     EXPIRED,
+    RELEASED,
     FAILED
 }
