@@ -1,5 +1,7 @@
 package org.openmrs.module.appointments.web.controller;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.model.AppointmentServiceSearchParams;
 import org.openmrs.module.appointments.service.AppointmentServiceDefinitionService;
@@ -33,6 +35,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Controller
 @RequestMapping(value = "/rest/" + RestConstants.VERSION_1 + "/appointmentService")
 public class AppointmentServiceController extends BaseRestController {
+
+    private static final Log log = LogFactory.getLog(AppointmentServiceController.class);
 
     @Autowired
     private AppointmentServiceDefinitionService appointmentServiceDefinitionService;
@@ -101,8 +105,11 @@ public class AppointmentServiceController extends BaseRestController {
     public ResponseEntity<Object> defineAppointmentService(@Valid @RequestBody AppointmentServiceDescription appointmentServiceDescription) throws IOException {
         if(appointmentServiceDescription.getName() == null)
             throw new RuntimeException("Appointment Service name should not be null");
-        AppointmentServiceDefinition appointmentServiceDefinition = appointmentServiceMapper.fromDescription(appointmentServiceDescription);
         try {
+            // Mapped inside the try so that a rejected location uuid, which now throws instead of
+            // being silently assigned as null, reaches the client as the same 400 a save failure
+            // already returns.
+            AppointmentServiceDefinition appointmentServiceDefinition = appointmentServiceMapper.fromDescription(appointmentServiceDescription);
             AppointmentServiceDefinition savedAppointmentServiceDefinition = appointmentServiceDefinitionService.save(appointmentServiceDefinition);
             AppointmentServiceFullResponse appointmentServiceFullResponse = appointmentServiceMapper.constructResponse(savedAppointmentServiceDefinition);
             return new ResponseEntity<>(appointmentServiceFullResponse, HttpStatus.OK);
@@ -115,6 +122,11 @@ public class AppointmentServiceController extends BaseRestController {
     @ResponseBody
     public ResponseEntity<Object> voidAppointmentService(@RequestParam(value = "uuid", required = true) String appointmentServiceUuid, @RequestParam(value = "void_reason", required = false) String voidReason ) {
         AppointmentServiceDefinition appointmentServiceDefinition = appointmentServiceDefinitionService.getAppointmentServiceByUuid(appointmentServiceUuid);
+        if (appointmentServiceDefinition == null) {
+            // Dereferenced unguarded before this, so an unknown uuid produced an NPE and a 500.
+            log.warn("Could not identify appointment service with uuid:" + appointmentServiceUuid);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
         if (appointmentServiceDefinition.getVoided()){
             AppointmentServiceFullResponse appointmentServiceFullResponse = appointmentServiceMapper.constructResponse(appointmentServiceDefinition);
             return new ResponseEntity<>(appointmentServiceFullResponse, HttpStatus.OK);

@@ -15,5 +15,9 @@ public class DefaultAppointmentValidator implements AppointmentValidator {
 			errors.add("Appointment cannot be created without Patient");
 		if (appointment.getService() == null)
 			errors.add("Appointment cannot be created without Service");
+		// A location-less appointment loses its billing, calendar and SMS side effects
+		// silently, so reject it at the boundary rather than persisting it.
+		if (appointment.getLocation() == null)
+			errors.add("Appointment cannot be created without Location");
 	}
 }

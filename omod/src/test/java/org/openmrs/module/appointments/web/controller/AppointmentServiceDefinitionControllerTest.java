@@ -12,6 +12,7 @@ import org.openmrs.module.appointments.util.DateUtil;
 import org.openmrs.module.appointments.web.contract.AppointmentServiceFullResponse;
 import org.openmrs.module.appointments.web.contract.AppointmentServiceDescription;
 import org.openmrs.module.appointments.web.mapper.AppointmentServiceMapper;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -212,5 +214,17 @@ public class AppointmentServiceDefinitionControllerTest {
         List<AppointmentServiceFullResponse> allAppointmentServicesWithTypes = appointmentServiceController.getAllAppointmentServicesWithTypes();
         verify(appointmentServiceDefinitionService, times(1)).getAllAppointmentServices(false);
         verify(appointmentServiceMapper, times(1)).constructFullResponseForServiceList(appointmentServiceDefinitionList);
+    }
+
+    @Test
+    public void shouldReturnNotFoundWhenVoidingAnUnknownService() {
+        // The uuid was dereferenced without a null check, so an unknown service produced an
+        // NPE and a 500 on a route the frontend uses.
+        when(appointmentServiceDefinitionService.getAppointmentServiceByUuid("unknownUuid")).thenReturn(null);
+
+        ResponseEntity<Object> response = appointmentServiceController.voidAppointmentService("unknownUuid", "reason");
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNull(response.getBody());
     }
 }

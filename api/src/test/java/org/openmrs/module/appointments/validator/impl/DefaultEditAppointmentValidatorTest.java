@@ -5,6 +5,7 @@ import org.junit.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.openmrs.Location;
 import org.openmrs.Patient;
 import org.openmrs.module.appointments.dao.AppointmentDao;
 import org.openmrs.module.appointments.model.Appointment;
@@ -34,6 +35,7 @@ public class DefaultEditAppointmentValidatorTest {
         appointment.setPatient(patient);
         appointment.setUuid(uuid);
         appointment.setService(new AppointmentServiceDefinition());
+        appointment.setLocation(new Location());
         return appointment;
     }
 
@@ -98,5 +100,40 @@ public class DefaultEditAppointmentValidatorTest {
 
         assertEquals(1, errors.size());
         assertEquals("Appointment cannot be updated without Service", errors.get(0));
+    }
+
+    @Test
+    public void shouldAddErrorWhenLocationIsNullInAppointment() {
+        // The applyForAll=false recurring route rebuilds the appointment from scratch, so a payload
+        // omitting locationUuid arrives here with no location and nothing to retain. Persisting it
+        // would create a row with its side effects dead.
+        Patient patient = new Patient();
+        patient.setUuid("patient");
+        String appointmentUuid = "uuid";
+        Appointment requestAppointment = createAppointment(appointmentUuid, patient);
+        requestAppointment.setLocation(null);
+        Appointment savedAppointment = createAppointment(appointmentUuid, patient);
+        List<String> errors = new ArrayList<>();
+        when(appointmentDao.getAppointmentByUuid(appointmentUuid)).thenReturn(savedAppointment);
+
+        defaultEditAppointmentValidator.validate(requestAppointment, errors);
+
+        assertEquals(1, errors.size());
+        assertEquals("Appointment cannot be updated without Location", errors.get(0));
+    }
+
+    @Test
+    public void shouldNotAddErrorWhenLocationIsPresentOnEdit() {
+        Patient patient = new Patient();
+        patient.setUuid("patient");
+        String appointmentUuid = "uuid";
+        Appointment requestAppointment = createAppointment(appointmentUuid, patient);
+        Appointment savedAppointment = createAppointment(appointmentUuid, patient);
+        List<String> errors = new ArrayList<>();
+        when(appointmentDao.getAppointmentByUuid(appointmentUuid)).thenReturn(savedAppointment);
+
+        defaultEditAppointmentValidator.validate(requestAppointment, errors);
+
+        assertTrue("an ordinary edit carrying a location must not be rejected", errors.isEmpty());
     }
 }

@@ -8,6 +8,7 @@ import org.apache.commons.lang.StringUtils;
 import org.openmrs.Concept;
 import org.openmrs.Location;
 import org.openmrs.api.ConceptService;
+import org.openmrs.api.APIException;
 import org.openmrs.api.LocationService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.appointments.model.AppointmentServiceAttribute;
@@ -112,9 +113,21 @@ public class AppointmentServiceMapper {
             appointmentServiceDefinition.setInitialAppointmentStatus(null);
         }
 
+        // on edit: if omitted, keep existing DB value. Unconditional assignment blanked the
+        // location of any service edited with a minimal payload.
         String locationUuid = appointmentServiceDescription.getLocationUuid();
-        Location location = locationService.getLocationByUuid(locationUuid);
-        appointmentServiceDefinition.setLocation(location);
+        if (StringUtils.isNotBlank(locationUuid)) {
+            Location location = locationService.getLocationByUuid(locationUuid);
+            if (location == null) {
+                // An unknown location uuid returns null; assigning it would blank the service's
+                // location instead of rejecting a bad request.
+                throw new APIException("Invalid location or location not found");
+            }
+            appointmentServiceDefinition.setLocation(location);
+        } else if (StringUtils.isBlank(appointmentServiceDescription.getUuid())) {
+            // new service without location
+            appointmentServiceDefinition.setLocation(null);
+        }
 
         String providerUuid = appointmentServiceDescription.getProviderUuid();
         if (StringUtils.isNotBlank(providerUuid)) {
