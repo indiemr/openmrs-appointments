@@ -1,6 +1,7 @@
 package org.openmrs.module.appointments.validator.impl;
 
 
+import org.openmrs.module.appointments.exception.AppointmentErrorReason;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentStatus;
 import org.openmrs.module.appointments.service.AppointmentSlotAvailabilityService;
@@ -23,11 +24,11 @@ public class AppointmentSlotCapacityValidator implements AppointmentValidator {
             return;
         }
         if (appointmentSlotAvailabilityService.isSlotBlocked(appointment)) {
-            errors.add("Selected time slot is unavailable. Please choose another slot.");
+            errors.add(AppointmentErrorReason.SLOT_UNAVAILABLE.getMessage());
             return;
         }
         if (appointmentSlotAvailabilityService.isSlotCapacityExceeded(appointment)) {
-            errors.add("Selected time slot is full. Please choose another slot.");
+            errors.add(AppointmentErrorReason.SLOT_FULL.getMessage());
         }
     }
 }

@@ -2,6 +2,7 @@ package org.openmrs.module.appointments.validator.impl;
 
 import java.util.List;
 
+import org.openmrs.module.appointments.exception.AppointmentErrorReason;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentStatus;
 import org.openmrs.module.appointments.util.AppointmentBookingRulesUtil;
@@ -23,7 +24,7 @@ public class AppointmentBookingWindowValidator implements AppointmentValidator {
             }
             if (!AppointmentBookingRulesUtil.isDateWithinBookingWindow(
                     appointment.getService(), appointment.getAppointmentDate())) {
-                errors.add("Selected date is outside the allowed booking window.");
+                errors.add(AppointmentErrorReason.OUTSIDE_BOOKING_WINDOW.getMessage());
             }
             return;
         }
@@ -32,7 +33,7 @@ public class AppointmentBookingWindowValidator implements AppointmentValidator {
             return;
         }
         if (!AppointmentBookingRulesUtil.isAppointmentWithinBookingWindow(appointment)) {
-            errors.add("Selected date is outside the allowed booking window.");
+            errors.add(AppointmentErrorReason.OUTSIDE_BOOKING_WINDOW.getMessage());
         }
     }
 }

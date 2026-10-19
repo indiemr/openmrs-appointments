@@ -6,6 +6,7 @@ import org.openmrs.Provider;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.Module;
 import org.openmrs.module.ModuleFactory;
+import org.openmrs.module.appointments.exception.AppointmentErrorReason;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentKind;
 import org.openmrs.module.appointments.model.AppointmentProvider;
@@ -23,8 +24,7 @@ public class VirtualAppointmentOAuthValidator implements AppointmentValidator {
 
     private static final String OAUTH_PROVIDER_MODULE_ID = "indiemroauthprovider";
     private static final String OAUTH_PROVIDER_CODE = "GOOGLE";
-    private static final String GOOGLE_ACCOUNT_REQUIRED =
-            "Google account is required to create tele consultation";
+    private static final String GOOGLE_ACCOUNT_REQUIRED = AppointmentErrorReason.PROVIDER_CALENDAR_NOT_CONNECTED.getMessage();
 
     @Override
     public void validate(Appointment appointment, List<String> errors) {
@@ -34,7 +34,7 @@ public class VirtualAppointmentOAuthValidator implements AppointmentValidator {
 
         Provider provider = resolveProvider(appointment);
         if (provider == null) {
-            errors.add("Provider is required to create a virtual appointment");
+            errors.add(AppointmentErrorReason.PROVIDER_REQUIRED.getMessage());
             return;
         }
 

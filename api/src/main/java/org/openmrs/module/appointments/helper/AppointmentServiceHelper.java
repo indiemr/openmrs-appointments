@@ -4,6 +4,8 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.openmrs.api.APIException;
+import org.openmrs.module.appointments.exception.AppointmentErrorReason;
+import org.openmrs.module.appointments.exception.AppointmentReasonException;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentAudit;
 import org.openmrs.module.appointments.model.AppointmentStatus;
@@ -92,8 +94,7 @@ public class AppointmentServiceHelper {
         List<String> errors = new ArrayList<>();
         validateAppointment(appointment, appointmentValidators, errors);
         if (!errors.isEmpty()) {
-            String message = StringUtils.join(errors, "\n");
-            throw new APIException(message);
+            throw validationException(errors);
         }
     }
 
@@ -103,8 +104,19 @@ public class AppointmentServiceHelper {
         List<String> errors = new ArrayList<>();
         validateStatusChange(appointment, appointmentStatus, errors, statusChangeValidators);
         if (!errors.isEmpty()) {
-            String message = StringUtils.join(errors, "\n");
-            throw new APIException(message);
+            throw validationException(errors);
         }
+    }
+
+    // Reason comes from the first error that has one; the message keeps every error
+    private APIException validationException(List<String> errors) {
+        String message = StringUtils.join(errors, "\n");
+        for (String error : errors) {
+            AppointmentErrorReason reason = AppointmentErrorReason.fromMessage(error);
+            if (reason != null) {
+                return new AppointmentReasonException(reason, message);
+            }
+        }
+        return new APIException(message);
     }
 }

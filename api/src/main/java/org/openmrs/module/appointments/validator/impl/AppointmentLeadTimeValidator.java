@@ -2,6 +2,7 @@ package org.openmrs.module.appointments.validator.impl;
 
 import java.util.List;
 
+import org.openmrs.module.appointments.exception.AppointmentErrorReason;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentStatus;
 import org.openmrs.module.appointments.util.AppointmentBookingRulesUtil;
@@ -19,7 +20,7 @@ public class AppointmentLeadTimeValidator implements AppointmentValidator {
         }
 
         if (!AppointmentBookingRulesUtil.isAppointmentOutsideLeadTime(appointment)) {
-            errors.add("Appointment must be booked in advance according to the minimum notice period.");
+            errors.add(AppointmentErrorReason.LEAD_TIME_NOT_MET.getMessage());
         }
     }
 }
