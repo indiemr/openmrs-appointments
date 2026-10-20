@@ -16,6 +16,7 @@ import org.openmrs.module.appointments.model.AppointmentHoldStatus;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.model.ServiceWeeklyAvailability;
 import org.openmrs.module.appointments.service.AppointmentHoldService;
+import org.openmrs.module.appointments.util.AppointmentBookingRulesUtil;
 import org.openmrs.module.appointments.util.AppointmentServiceCapacityUtil;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -228,6 +229,10 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
                 || hold.getStartDateTime() == null) {
             throw new AppointmentReasonException(AppointmentErrorReason.INVALID_REQUEST,
                     "service, patient and startDateTime are required");
+        }
+        if (!AppointmentBookingRulesUtil.isDateWithinBookingWindow(hold.getService(), hold.getStartDateTime())) {
+            throw new AppointmentReasonException(AppointmentErrorReason.OUTSIDE_BOOKING_WINDOW,
+                    AppointmentErrorReason.OUTSIDE_BOOKING_WINDOW.getMessage());
         }
     }
 

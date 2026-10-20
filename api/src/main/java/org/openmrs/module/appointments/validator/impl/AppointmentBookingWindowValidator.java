@@ -14,7 +14,8 @@ public class AppointmentBookingWindowValidator implements AppointmentValidator {
     public void validate(Appointment appointment, List<String> errors) {
         if (appointment == null
                 || appointment.getService() == null
-                || AppointmentStatus.Cancelled.equals(appointment.getStatus())) {
+                || AppointmentStatus.Cancelled.equals(appointment.getStatus())
+                || AppointmentStatus.Tentative.equals(appointment.getStatus())) {
             return;
         }
 
