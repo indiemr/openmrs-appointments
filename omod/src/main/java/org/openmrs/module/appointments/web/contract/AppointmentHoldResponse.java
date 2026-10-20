@@ -11,6 +11,7 @@ public class AppointmentHoldResponse {
     private Date endDateTime;
     private Date expiresAt;
     private long expiresInSeconds;
+    private String notes;
 
     public String getUuid() { return uuid; }
     public void setUuid(String uuid) { this.uuid = uuid; }
@@ -28,4 +29,6 @@ public class AppointmentHoldResponse {
     public void setExpiresAt(Date expiresAt) { this.expiresAt = expiresAt; }
     public long getExpiresInSeconds() { return expiresInSeconds; }
     public void setExpiresInSeconds(long expiresInSeconds) { this.expiresInSeconds = expiresInSeconds; }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 }

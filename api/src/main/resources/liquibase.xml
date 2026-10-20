@@ -1294,4 +1294,18 @@
             <column name="expires_at"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="add_notes_to_appointment_hold" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="appointment_hold" columnName="notes" />
+            </not>
+        </preConditions>
+        <comment>Patient notes captured with the hold, copied to the appointment on confirm</comment>
+        <addColumn tableName="appointment_hold">
+            <column name="notes" type="varchar(1000)">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

@@ -5,10 +5,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Patient;
 import org.openmrs.Provider;
-import org.openmrs.api.APIException;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.appointments.dao.AppointmentDao;
 import org.openmrs.module.appointments.dao.AppointmentHoldDao;
+import org.openmrs.module.appointments.exception.AppointmentErrorReason;
+import org.openmrs.module.appointments.exception.AppointmentReasonException;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentHold;
 import org.openmrs.module.appointments.model.AppointmentHoldStatus;
@@ -65,7 +66,7 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
         // Patient lock first, then slot lock: fixed order avoids deadlocks between concurrent holds
         String patientLockKey = patientLockKey(hold.getPatient());
         if (!appointmentHoldDao.acquireSlotLock(patientLockKey, LOCK_TIMEOUT_SECONDS)) {
-            throw new APIException("Could not lock slot. Please retry.");
+            throw new AppointmentReasonException(AppointmentErrorReason.SLOT_LOCK_BUSY, "Could not lock slot. Please retry.");
         }
         try {
             validatePatientHoldLimits(hold.getPatient());
@@ -78,19 +79,20 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
     private void validatePatientHoldLimits(Patient patient) {
         int maxActive = holdMaxActivePerPatient();
         if (appointmentHoldDao.countActiveForPatient(patient) >= maxActive) {
-            throw new APIException("You already have " + maxActive
+            throw new AppointmentReasonException(AppointmentErrorReason.ACTIVE_HOLD_LIMIT, "You already have " + maxActive
                     + " slot(s) on hold. Book or release a held slot before holding another.");
         }
         Date since = new Date(System.currentTimeMillis() - ONE_DAY_MILLIS);
         if (appointmentHoldDao.countUnusedForPatientSince(patient, since) >= holdMaxUnusedPerPatientPerDay()) {
-            throw new APIException("Too many unused slot holds in the last 24 hours. Please try again later.");
+            throw new AppointmentReasonException(AppointmentErrorReason.UNUSED_HOLD_LIMIT,
+                    "Too many unused slot holds in the last 24 hours. Please try again later.");
         }
     }
 
     private AppointmentHold holdSlot(AppointmentHold hold) {
         String lockKey = slotLockKey(hold.getService(), hold.getStartDateTime());
         if (!appointmentHoldDao.acquireSlotLock(lockKey, LOCK_TIMEOUT_SECONDS)) {
-            throw new APIException("Could not lock slot. Please retry.");
+            throw new AppointmentReasonException(AppointmentErrorReason.SLOT_LOCK_BUSY, "Could not lock slot. Please retry.");
         }
         try {
             int capacity = resolveCapacity(hold);
@@ -115,7 +117,7 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
             int bookedHolds = appointmentHoldDao.countUnexpiredOverlapping(
                 hold.getService(), hold.getStartDateTime(), hold.getEndDateTime(), null);
             if (bookedAppointments + bookedHolds >= capacity) {
-                throw new APIException("Selected time slot is full. Please choose another slot.");
+                throw new AppointmentReasonException(AppointmentErrorReason.SLOT_FULL, AppointmentErrorReason.SLOT_FULL.getMessage());
             }
 
             hold.setStatus(AppointmentHoldStatus.HELD);
@@ -131,7 +133,8 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
         boolean consumed = appointmentHoldDao.consumeIfActive(holdUuid, appointment);
         if (!consumed) {
             appointmentHoldDao.expireIfDue(holdUuid);
-            throw new APIException("Appointment hold has expired or is no longer active.");
+            throw new AppointmentReasonException(inactiveReason(appointmentHoldDao.getByUuid(holdUuid)),
+                    "Appointment hold has expired or is no longer active.");
         }
         AppointmentHold hold = appointmentHoldDao.getByUuid(holdUuid);
         log.info("Consumed appointment hold " + holdUuid);
@@ -141,7 +144,7 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
     @Override
     public AppointmentHold releaseHold(String holdUuid) {
         if (StringUtils.isBlank(holdUuid)) {
-            throw new APIException("holdUuid is required");
+            throw new AppointmentReasonException(AppointmentErrorReason.INVALID_REQUEST, "holdUuid is required");
         }
         // Update before load so the session doesn't hand back a stale HELD entity
         boolean released = appointmentHoldDao.releaseIfHeld(holdUuid, Context.getAuthenticatedUser(), new Date());
@@ -150,7 +153,8 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
             return null;
         }
         if (!released && AppointmentHoldStatus.CONSUMED.equals(hold.getStatus())) {
-            throw new APIException("Appointment hold has already been used to book an appointment. Cancel the appointment instead.");
+            throw new AppointmentReasonException(AppointmentErrorReason.HOLD_ALREADY_USED,
+                    "Appointment hold has already been used to book an appointment. Cancel the appointment instead.");
         }
         if (released) {
             log.info("Released appointment hold " + holdUuid);
@@ -161,7 +165,7 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
     @Override
     public AppointmentHold extendHold(String holdUuid) {
         if (StringUtils.isBlank(holdUuid)) {
-            throw new APIException("holdUuid is required");
+            throw new AppointmentReasonException(AppointmentErrorReason.INVALID_REQUEST, "holdUuid is required");
         }
         AppointmentHold hold = appointmentHoldDao.getByUuid(holdUuid);
         if (hold == null) {
@@ -169,13 +173,15 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
         }
         Date now = new Date();
         if (!AppointmentHoldStatus.HELD.equals(hold.getStatus()) || !hold.getExpiresAt().after(now)) {
-            throw new APIException("Appointment hold has expired or is no longer active. Please hold the slot again.");
+            throw new AppointmentReasonException(inactiveReason(hold),
+                    "Appointment hold has expired or is no longer active. Please hold the slot again.");
         }
 
         // New expiry is now + extend window, never beyond dateCreated + max hold time
         Date maxExpiresAt = new Date(hold.getDateCreated().getTime() + holdMaxMinutes() * 60_000L);
         if (!hold.getExpiresAt().before(maxExpiresAt)) {
-            throw new APIException("Maximum hold time of " + holdMaxMinutes() + " minutes reached for this slot.");
+            throw new AppointmentReasonException(AppointmentErrorReason.HOLD_MAX_TIME_REACHED,
+                    "Maximum hold time of " + holdMaxMinutes() + " minutes reached for this slot.");
         }
         Date requested = new Date(now.getTime() + holdExtendMinutes() * 60_000L);
         Date newExpiresAt = requested.before(maxExpiresAt) ? requested : maxExpiresAt;
@@ -185,7 +191,8 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
         }
 
         if (!appointmentHoldDao.extendIfActive(hold, newExpiresAt, Context.getAuthenticatedUser(), now)) {
-            throw new APIException("Appointment hold has expired or is no longer active. Please hold the slot again.");
+            throw new AppointmentReasonException(inactiveReason(appointmentHoldDao.getByUuid(holdUuid)),
+                    "Appointment hold has expired or is no longer active. Please hold the slot again.");
         }
         log.info("Extended appointment hold " + holdUuid + " until " + newExpiresAt);
         return hold;
@@ -219,8 +226,20 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
     private void validateForCreate(AppointmentHold hold) {
         if (hold == null || hold.getService() == null || hold.getPatient() == null
                 || hold.getStartDateTime() == null) {
-            throw new APIException("service, patient and startDateTime are required");
+            throw new AppointmentReasonException(AppointmentErrorReason.INVALID_REQUEST,
+                    "service, patient and startDateTime are required");
         }
+    }
+
+    // A hold that is not HELD (or is HELD past expiresAt) counts as expired unless released or used
+    private AppointmentErrorReason inactiveReason(AppointmentHold hold) {
+        if (hold != null && AppointmentHoldStatus.RELEASED.equals(hold.getStatus())) {
+            return AppointmentErrorReason.HOLD_RELEASED;
+        }
+        if (hold != null && AppointmentHoldStatus.CONSUMED.equals(hold.getStatus())) {
+            return AppointmentErrorReason.HOLD_ALREADY_USED;
+        }
+        return AppointmentErrorReason.HOLD_EXPIRED;
     }
 
     private int holdMinutes() {

@@ -2,6 +2,7 @@ package org.openmrs.module.appointments.validator.impl;
 
 import java.util.List;
 
+import org.openmrs.module.appointments.exception.AppointmentErrorReason;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentStatus;
 import org.openmrs.module.appointments.util.AppointmentBookingRulesUtil;
@@ -14,7 +15,7 @@ public class AppointmentCancellationStatusChangeValidator implements Appointment
             return;
         }
         if (!AppointmentBookingRulesUtil.isCancellationAllowed(appointment)) {
-            errors.add("This appointment can no longer be cancelled because the cancellation cutoff has passed.");
+            errors.add(AppointmentErrorReason.CANCELLATION_CUTOFF_PASSED.getMessage());
         }
     }
 }

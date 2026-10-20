@@ -15,6 +15,7 @@ public class AppointmentHold extends BaseOpenmrsData implements Serializable {
     private Date endDateTime;
     private AppointmentHoldStatus status;
     private Date expiresAt;
+    private String notes;
 
     @Override
     public Integer getId() {
@@ -42,4 +43,6 @@ public class AppointmentHold extends BaseOpenmrsData implements Serializable {
     public void setStatus(AppointmentHoldStatus status) { this.status = status; }
     public Date getExpiresAt() { return expiresAt; }
     public void setExpiresAt(Date expiresAt) { this.expiresAt = expiresAt; }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 }

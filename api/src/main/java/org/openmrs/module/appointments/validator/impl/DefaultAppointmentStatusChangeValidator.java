@@ -1,6 +1,7 @@
 package org.openmrs.module.appointments.validator.impl;
 
 import org.openmrs.api.context.Context;
+import org.openmrs.module.appointments.exception.AppointmentErrorReason;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentStatus;
 import org.openmrs.module.appointments.util.AppointmentStatusUtil;
@@ -17,7 +18,7 @@ public class DefaultAppointmentStatusChangeValidator implements AppointmentStatu
         if (!disableValidation) {
             AppointmentStatus currentStatus = appointment.getStatus();
             if (toStatus.getSequence() <= currentStatus.getSequence() && !AppointmentStatusUtil.isConfirmed(toStatus)) {
-                errors.add("Appointment status can not be changed from " + appointment.getStatus() + " to " + toStatus);
+                errors.add(AppointmentErrorReason.STATUS_CHANGE_NOT_ALLOWED.getMessage() + " " + appointment.getStatus() + " to " + toStatus);
             }
         }
     }

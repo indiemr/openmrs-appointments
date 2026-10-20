@@ -16,6 +16,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class AppointmentHoldMapper {
 
+    private static final int MAX_NOTES_LENGTH = 1000;
+
     @Autowired
     private PatientService patientService;
 
@@ -44,6 +46,11 @@ public class AppointmentHoldMapper {
         hold.setService(service);
         hold.setStartDateTime(request.getStartDateTime());
         hold.setEndDateTime(request.getEndDateTime());
+        String notes = StringUtils.trimToNull(request.getNotes());
+        if (notes != null && notes.length() > MAX_NOTES_LENGTH) {
+            throw new APIException("notes must be at most " + MAX_NOTES_LENGTH + " characters");
+        }
+        hold.setNotes(notes);
         return hold;
     }
 
@@ -56,6 +63,7 @@ public class AppointmentHoldMapper {
         response.setStartDateTime(hold.getStartDateTime());
         response.setEndDateTime(hold.getEndDateTime());
         response.setExpiresAt(hold.getExpiresAt());
+        response.setNotes(hold.getNotes());
         if (hold.getExpiresAt() != null && AppointmentHoldStatus.HELD.equals(hold.getStatus())) {
             long seconds = (hold.getExpiresAt().getTime() - System.currentTimeMillis()) / 1000L;
             response.setExpiresInSeconds(Math.max(seconds, 0));

@@ -7,6 +7,7 @@ public class AppointmentHoldRequest {
     private String serviceUuid;
     private Date startDateTime;
     private Date endDateTime;
+    private String notes;
 
     public String getPatientUuid() { return patientUuid; }
     public void setPatientUuid(String patientUuid) { this.patientUuid = patientUuid; }
@@ -16,4 +17,6 @@ public class AppointmentHoldRequest {
     public void setStartDateTime(Date startDateTime) { this.startDateTime = startDateTime; }
     public Date getEndDateTime() { return endDateTime; }
     public void setEndDateTime(Date endDateTime) { this.endDateTime = endDateTime; }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 }
