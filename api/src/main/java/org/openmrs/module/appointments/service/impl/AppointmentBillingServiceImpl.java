@@ -28,10 +28,14 @@ import org.openmrs.module.billing.api.model.BillStatus;
 import org.openmrs.module.billing.api.model.BillableService;
 import org.openmrs.module.billing.api.model.CashPoint;
 import org.openmrs.module.billing.api.model.CashierItemPrice;
+import org.openmrs.module.billing.api.model.PaymentAttribute;
 import org.openmrs.module.billing.api.model.PaymentMode;
+import org.openmrs.module.billing.api.model.PaymentModeAttributeType;
 import java.math.BigDecimal;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -133,11 +137,46 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
             if (mode == null) {
                 throw new IllegalArgumentException("Payment mode not found: " + payment.getPaymentMode());
             }
-            bill.addPayment(mode, null, bill.getTotal(), payment.getAmountPaying());
+            bill.addPayment(mode, buildPaymentAttributes(mode, payment.getAttributes()), bill.getTotal(),
+                    payment.getAmountPaying());
         }
         billService.save(bill);
         log.info("Added " + payments.size() + " payment(s) to bill " + bill.getUuid()
                 + " for appointment " + appointmentUuid);
+    }
+
+    private Set<PaymentAttribute> buildPaymentAttributes(PaymentMode mode, Map<String, String> values) {
+        if (values == null || values.isEmpty()) {
+            return null;
+        }
+        Set<PaymentAttribute> attributes = new HashSet<>();
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            if (StringUtils.isBlank(entry.getValue())) {
+                continue;
+            }
+            PaymentModeAttributeType type = findAttributeType(mode, entry.getKey());
+            if (type == null) {
+                throw new IllegalArgumentException("Payment attribute type " + entry.getKey()
+                        + " not defined for payment mode " + mode.getUuid());
+            }
+            PaymentAttribute attribute = new PaymentAttribute();
+            attribute.setAttributeType(type);
+            attribute.setValue(entry.getValue());
+            attributes.add(attribute);
+        }
+        return attributes.isEmpty() ? null : attributes;
+    }
+
+    private PaymentModeAttributeType findAttributeType(PaymentMode mode, String typeUuid) {
+        if (mode.getAttributeTypes() == null || StringUtils.isBlank(typeUuid)) {
+            return null;
+        }
+        for (PaymentModeAttributeType type : mode.getAttributeTypes()) {
+            if (type != null && !Boolean.TRUE.equals(type.getRetired()) && typeUuid.equalsIgnoreCase(type.getUuid())) {
+                return type;
+            }
+        }
+        return null;
     }
 
     @Override
