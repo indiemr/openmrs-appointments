@@ -24,7 +24,10 @@ import org.openmrs.module.billing.api.model.BillStatus;
 import org.openmrs.module.billing.api.model.BillableService;
 import org.openmrs.module.billing.api.model.CashPoint;
 import org.openmrs.module.billing.api.model.CashierItemPrice;
+import org.openmrs.module.billing.api.model.Payment;
+import org.openmrs.module.billing.api.model.PaymentAttribute;
 import org.openmrs.module.billing.api.model.PaymentMode;
+import org.openmrs.module.billing.api.model.PaymentModeAttributeType;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -32,6 +35,7 @@ import java.util.HashSet;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.eq;
@@ -263,6 +267,66 @@ public class AppointmentBillingServiceImplTest {
 
         verify(billService).save(bill);
         assertEquals(1, bill.getPayments().size());
+    }
+
+    @Test
+    public void shouldAddPaymentAttributeDefinedOnMode() {
+        Bill bill = billForPayment();
+        PaymentMode mode = modeWithAttributeType("ref-type");
+        when(paymentModeService.getByUuid("online")).thenReturn(mode);
+
+        AppointmentPayment payment = payment("online", "200");
+        payment.setAttributes(Collections.singletonMap("ref-type", "TXN-123"));
+        service.addPaymentsForAppointment("appt", Collections.singletonList(payment));
+
+        Payment saved = bill.getPayments().iterator().next();
+        assertEquals(1, saved.getAttributes().size());
+        PaymentAttribute attribute = saved.getAttributes().iterator().next();
+        assertEquals("ref-type", attribute.getAttributeType().getUuid());
+        assertEquals("TXN-123", attribute.getValue());
+    }
+
+    @Test
+    public void shouldSkipBlankPaymentAttributeValues() {
+        Bill bill = billForPayment();
+        when(paymentModeService.getByUuid("online")).thenReturn(modeWithAttributeType("ref-type"));
+
+        AppointmentPayment payment = payment("online", "200");
+        payment.setAttributes(Collections.singletonMap("ref-type", " "));
+        service.addPaymentsForAppointment("appt", Collections.singletonList(payment));
+
+        Payment saved = bill.getPayments().iterator().next();
+        assertTrue(saved.getAttributes() == null || saved.getAttributes().isEmpty());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void shouldThrowWhenPaymentAttributeTypeNotOnMode() {
+        billForPayment();
+        when(paymentModeService.getByUuid("online")).thenReturn(modeWithAttributeType("ref-type"));
+
+        AppointmentPayment payment = payment("online", "200");
+        payment.setAttributes(Collections.singletonMap("other-type", "TXN-123"));
+        service.addPaymentsForAppointment("appt", Collections.singletonList(payment));
+    }
+
+    private Bill billForPayment() {
+        Appointment appointment = new Appointment();
+        appointment.setBillUuid("bill");
+        when(appointmentDao.getAppointmentByUuid("appt")).thenReturn(appointment);
+        Bill bill = new Bill();
+        bill.setUuid("bill");
+        when(billService.getByUuid("bill")).thenReturn(bill);
+        when(billService.save(bill)).thenReturn(bill);
+        return bill;
+    }
+
+    private PaymentMode modeWithAttributeType(String typeUuid) {
+        PaymentMode mode = new PaymentMode();
+        mode.setUuid("online");
+        PaymentModeAttributeType type = new PaymentModeAttributeType();
+        type.setUuid(typeUuid);
+        mode.addAttributeType(type);
+        return mode;
     }
 
     @Test
