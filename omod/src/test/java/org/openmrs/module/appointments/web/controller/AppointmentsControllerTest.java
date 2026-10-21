@@ -13,6 +13,7 @@ import org.mockito.stubbing.Answer;
 import org.openmrs.Patient;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.openmrs.module.appointments.model.Appointment;
+import org.openmrs.module.appointments.model.AppointmentNote;
 import org.openmrs.module.appointments.model.AppointmentPayment;
 import org.openmrs.module.appointments.model.AppointmentSearchRequest;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
@@ -24,6 +25,7 @@ import org.openmrs.module.appointments.web.contract.AppointmentDefaultResponse;
 import org.openmrs.module.appointments.web.contract.AppointmentRequest;
 import org.openmrs.module.appointments.web.contract.AppointmentStatusChangeRequest;
 import org.openmrs.module.appointments.web.mapper.AppointmentMapper;
+import org.openmrs.module.appointments.web.mapper.AppointmentNoteMapper;
 import org.openmrs.module.appointments.web.validators.AppointmentSearchValidator;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -69,6 +71,9 @@ public class AppointmentsControllerTest {
 
     @Mock
     private AppointmentMapper appointmentMapper;
+
+    @Mock
+    private AppointmentNoteMapper appointmentNoteMapper;
 
     @InjectMocks
     private AppointmentsController appointmentsController;
@@ -136,14 +141,14 @@ public class AppointmentsControllerTest {
         appointment.setService(new AppointmentServiceDefinition());
 
         when(appointmentMapper.fromRequest(request)).thenReturn(appointment);
-        when(appointmentsService.validateAndSave(any(Supplier.class)))
+        when(appointmentsService.validateAndSave(any(Supplier.class), any()))
                 .thenAnswer(invocation -> appointmentMapper.fromRequest(request));
 
         appointmentsController.saveAppointment(request);
 
 
         verify(appointmentMapper, times(1)).fromRequest(request);
-        verify(appointmentsService, times(1)).validateAndSave(any(Supplier.class));
+        verify(appointmentsService, times(1)).validateAndSave(any(Supplier.class), any());
     }
 
     @Test
@@ -160,13 +165,13 @@ public class AppointmentsControllerTest {
         appointment.setService(new AppointmentServiceDefinition());
 
         when(appointmentMapper.fromRequest(request)).thenReturn(appointment);
-        when(appointmentsService.validateAndSave(any(Supplier.class)))
+        when(appointmentsService.validateAndSave(any(Supplier.class), any()))
                 .thenAnswer(invocation -> appointmentMapper.fromRequest(request));
         appointmentsController.saveAppointment(request);
 
 
         verify(appointmentMapper, times(1)).fromRequest(request);
-        verify(appointmentsService, times(1)).validateAndSave(any(Supplier.class));
+        verify(appointmentsService, times(1)).validateAndSave(any(Supplier.class), any());
     }
 
 
@@ -213,20 +218,40 @@ public class AppointmentsControllerTest {
 
     @Test
     public void shouldChangeStatusOfAppointment() throws Exception {
-        Map statusDetails = new HashMap();
+        Map<String, Object> statusDetails = new HashMap<>();
         statusDetails.put("toStatus", "Completed");
         Appointment appointment = new Appointment();
+        List<AppointmentNote> noNotes = new ArrayList<>();
         when(appointmentsService.getAppointmentByUuid(anyString())).thenReturn(appointment);
+        when(appointmentNoteMapper.fromJson(null)).thenReturn(noNotes);
 
         appointmentsController.transitionAppointment("appointmentUuid", statusDetails);
 
         verify(appointmentsService, times(1)).getAppointmentByUuid("appointmentUuid");
-        verify(appointmentsService, times(1)).changeStatus(appointment, "Completed", null);
+        verify(appointmentsService, times(1)).changeStatus(appointment, "Completed", null, noNotes);
+    }
+
+    @Test
+    public void shouldPassCancelNotesWhenCancellingWithNotes() throws Exception {
+        Map<String, Object> noteJson = new HashMap<>();
+        noteJson.put("note", "Travelling that week");
+        List<Object> notesJson = Collections.singletonList(noteJson);
+        Map<String, Object> statusDetails = new HashMap<>();
+        statusDetails.put("toStatus", "Cancelled");
+        statusDetails.put("notes", notesJson);
+        Appointment appointment = new Appointment();
+        List<AppointmentNote> notes = Collections.singletonList(new AppointmentNote());
+        when(appointmentsService.getAppointmentByUuid(anyString())).thenReturn(appointment);
+        when(appointmentNoteMapper.fromJson(notesJson)).thenReturn(notes);
+
+        appointmentsController.transitionAppointment("appointmentUuid", statusDetails);
+
+        verify(appointmentsService, times(1)).changeStatus(appointment, "Cancelled", null, notes);
     }
 
     @Test
     public void shouldReturnErrorResponseWhenAppointmentDoesNotExist() throws Exception {
-        Map<String, String> statusDetails = new HashMap();
+        Map<String, Object> statusDetails = new HashMap<>();
         statusDetails.put("toStatus", "Completed");
         when(appointmentsService.getAppointmentByUuid(anyString())).thenReturn(null);
 
@@ -236,7 +261,7 @@ public class AppointmentsControllerTest {
         appointmentsController.transitionAppointment("appointmentUuid", statusDetails);
 
         verify(appointmentsService, times(1)).getAppointmentByUuid("appointmentUuid");
-        verify(appointmentsService, never()).changeStatus(any(), any(), any());
+        verify(appointmentsService, never()).changeStatus(any(), any(), any(), any());
     }
 
     @Test

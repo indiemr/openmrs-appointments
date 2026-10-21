@@ -16,6 +16,7 @@ import org.openmrs.module.appointments.service.AppointmentsService;
 import org.openmrs.module.appointments.util.DateUtil;
 import org.openmrs.module.appointments.web.contract.*;
 import org.openmrs.module.appointments.web.mapper.AppointmentMapper;
+import org.openmrs.module.appointments.web.mapper.AppointmentNoteMapper;
 import org.openmrs.module.appointments.web.mapper.AppointmentServiceMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -50,6 +51,9 @@ public class AppointmentControllerTest {
 
     @Mock
     private AppointmentServiceMapper appointmentServiceMapper;
+
+    @Mock
+    private AppointmentNoteMapper appointmentNoteMapper;
 
     @InjectMocks
     private AppointmentController appointmentController;
@@ -174,7 +178,7 @@ public class AppointmentControllerTest {
     @Test
     public void shouldThrowExceptionIfPatientUuidIsBlankWhileCreatingAppointment() throws Exception {
         //when(appointmentsService.validateAndSave(any(Appointment.class))).thenThrow(new APIException("Exception Msg"));
-        when(appointmentsService.validateAndSave(any(Supplier.class))).thenThrow(new APIException("Exception Msg"));
+        when(appointmentsService.validateAndSave(any(Supplier.class), any())).thenThrow(new APIException("Exception Msg"));
         ResponseEntity<Object> responseEntity = appointmentController.saveAppointment(new AppointmentRequest());
         assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
     }
@@ -328,11 +332,11 @@ public class AppointmentControllerTest {
         appointment.setUuid("appointmentUuid");
 
         when(appointmentMapper.fromRequest(appointmentRequest)).thenReturn(appointment);
-        when(appointmentsService.validateAndSave(any(Supplier.class))).thenReturn(appointment);
+        when(appointmentsService.validateAndSave(any(Supplier.class), any())).thenReturn(appointment);
         //when(appointmentsService.validateAndSave(appointment)).thenReturn(appointment);
 
         appointmentController.saveAppointment(appointmentRequest);
         //Mockito.verify(appointmentMapper, times(1)).fromRequest(appointmentRequest);
-        Mockito.verify(appointmentsService, times(1)).validateAndSave(any(Supplier.class));
+        Mockito.verify(appointmentsService, times(1)).validateAndSave(any(Supplier.class), any());
     }
 }

@@ -34,6 +34,7 @@ import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.model.AppointmentServiceType;
 import org.openmrs.module.appointments.model.AppointmentStatus;
 import org.openmrs.module.appointments.model.Speciality;
+import org.openmrs.module.appointments.service.AppointmentNoteService;
 import org.openmrs.module.appointments.service.AppointmentServiceDefinitionService;
 import org.openmrs.module.appointments.service.AppointmentsService;
 import org.openmrs.module.appointments.util.DateUtil;
@@ -108,6 +109,12 @@ public class AppointmentMapperTest {
 
     @Mock
     private ConceptService conceptService;
+
+    @Mock
+    private AppointmentNoteService appointmentNoteService;
+
+    @Mock
+    private AppointmentNoteMapper appointmentNoteMapper;
 
     @InjectMocks
     private AppointmentMapper appointmentMapper;

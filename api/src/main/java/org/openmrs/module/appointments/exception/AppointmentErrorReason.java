@@ -23,7 +23,13 @@ public enum AppointmentErrorReason {
     // Validator appends "<from> to <to>"
     STATUS_CHANGE_NOT_ALLOWED("Appointment status can not be changed from"),
     PROVIDER_REQUIRED("Provider is required to create a virtual appointment"),
-    PROVIDER_CALENDAR_NOT_CONNECTED("Google account is required to create tele consultation");
+    PROVIDER_CALENDAR_NOT_CONNECTED("Google account is required to create tele consultation"),
+    NOTE_REQUIRED(null),
+    NOTE_TOO_LONG(null),
+    NOTE_NOT_FOUND(null),
+    NOTE_NOT_EDITABLE(null),
+    NOTE_TYPE_NOT_ALLOWED(null),
+    TOO_MANY_NOTES(null);
 
     private final String message;
 

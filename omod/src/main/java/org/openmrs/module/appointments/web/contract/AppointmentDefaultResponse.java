@@ -1,5 +1,6 @@
 package org.openmrs.module.appointments.web.contract;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +33,7 @@ public class AppointmentDefaultResponse {
 	private AppointmentBillSummary bill;
 	private Boolean dateOnly;
 	private String appointmentDate; // return as "yyyy-MM-dd", not epoch
+	private List<AppointmentNoteResponse> notes = new ArrayList<>();
 
 	public String getUuid() {
 		return uuid;
@@ -238,5 +240,13 @@ public class AppointmentDefaultResponse {
 
 	public void setAppointmentDate(String appointmentDate) {
 		this.appointmentDate = appointmentDate;
+	}
+
+	public List<AppointmentNoteResponse> getNotes() {
+		return notes;
+	}
+
+	public void setNotes(List<AppointmentNoteResponse> notes) {
+		this.notes = notes;
 	}
 }

@@ -11,6 +11,8 @@ import org.openmrs.api.context.Context;
 import org.openmrs.module.appointments.conflicts.AppointmentConflict;
 import org.openmrs.module.appointments.dao.AppointmentAuditDao;
 import org.openmrs.module.appointments.dao.AppointmentDao;
+import org.openmrs.module.appointments.exception.AppointmentErrorReason;
+import org.openmrs.module.appointments.exception.AppointmentReasonException;
 import org.openmrs.module.appointments.helper.AppointmentReminderLocationUtil;
 import org.openmrs.module.appointments.helper.AppointmentServiceHelper;
 import org.openmrs.module.appointments.model.Appointment;
@@ -23,9 +25,12 @@ import org.openmrs.module.appointments.model.AppointmentSearchRequestModel;
 import org.openmrs.module.appointments.model.AppointmentProviderResponse;
 import org.openmrs.module.appointments.model.AppointmentKind;
 import org.openmrs.module.appointments.model.AppointmentAudit;
+import org.openmrs.module.appointments.model.AppointmentNote;
+import org.openmrs.module.appointments.model.AppointmentNoteType;
 import org.openmrs.module.appointments.notification.AppointmentReminderSmsNotifier;
 import org.openmrs.module.appointments.notification.NotificationResult;
 import org.openmrs.module.appointments.service.AppointmentArgumentsMapper;
+import org.openmrs.module.appointments.service.AppointmentNoteService;
 import org.openmrs.module.appointments.service.AppointmentNumberGenerator;
 import org.openmrs.module.appointments.service.AppointmentNumberGeneratorLocator;
 import org.openmrs.module.appointments.service.AppointmentsService;
@@ -50,6 +55,7 @@ import static org.openmrs.module.appointments.util.DateUtil.getStartOfDay;
 public class AppointmentsServiceImpl implements AppointmentsService {
 
     private static final String PRIVILEGES_EXCEPTION_CODE = "error.privilegesRequired";
+    public static final int MAX_NOTES_PER_REQUEST = 10;
     private Log log = LogFactory.getLog(this.getClass());
     private AppointmentDao appointmentDao;
 
@@ -74,6 +80,8 @@ public class AppointmentsServiceImpl implements AppointmentsService {
     private AppointmentReminderSmsNotifier appointmentReminderSmsNotifier;
     
     private AppointmentArgumentsMapper appointmentArgumentsMapper;
+
+    private AppointmentNoteService appointmentNoteService;
 
     public void setAppointmentDao(AppointmentDao appointmentDao) {
         this.appointmentDao = appointmentDao;
@@ -156,11 +164,24 @@ public class AppointmentsServiceImpl implements AppointmentsService {
     @Transactional
     @Override
     public Appointment validateAndSave(Supplier<Appointment> mapper) {
+        return validateAndSave(mapper, null);
+    }
+
+    @Transactional
+    @Override
+    public Appointment validateAndSave(Supplier<Appointment> mapper, List<AppointmentNote> notesToAdd) {
         Appointment appointment = mapper.get();
+        // An edit that moves the appointment in place (booking module reschedule) may carry its reason
+        Set<AppointmentNoteType> allowedTypes = appointment.getId() == null
+                ? EnumSet.of(AppointmentNoteType.REASON_FOR_VISIT, AppointmentNoteType.ADDITIONAL_INFO)
+                : EnumSet.of(AppointmentNoteType.REASON_FOR_VISIT, AppointmentNoteType.ADDITIONAL_INFO,
+                        AppointmentNoteType.RESCHEDULE);
+        List<AppointmentNote> bookingNotes = prepareNotes(notesToAdd, AppointmentNoteType.REASON_FOR_VISIT, allowedTypes);
         validate(appointment, appointmentValidators);
         checkAndAssignAppointmentNumber(appointment);
         // setupTeleconsultation(appointment);
         save(appointment);
+        saveNotes(appointment, bookingNotes);
         notifyUpdates(appointment);
         return appointment;
     }
@@ -299,7 +320,20 @@ public class AppointmentsServiceImpl implements AppointmentsService {
     @Transactional
     @Override
     public void changeStatus(Appointment appointment, String status, Date onDate) throws APIException {
+        changeStatus(appointment, status, onDate, null);
+    }
+
+    @Transactional
+    @Override
+    public void changeStatus(Appointment appointment, String status, Date onDate, List<AppointmentNote> notesToAdd)
+            throws APIException {
         AppointmentStatus appointmentStatus = AppointmentStatus.valueOf(status);
+        List<AppointmentNote> cancelNotes = prepareNotes(notesToAdd, AppointmentNoteType.CANCEL,
+                EnumSet.of(AppointmentNoteType.CANCEL));
+        if (!cancelNotes.isEmpty() && !AppointmentStatus.Cancelled.equals(appointmentStatus)) {
+            throw new AppointmentReasonException(AppointmentErrorReason.NOTE_TYPE_NOT_ALLOWED,
+                    "Notes can only be added when cancelling an appointment");
+        }
         validateUserPrivilege(appointment, appointmentStatus);
         appointmentServiceHelper.validateStatusChangeAndGetErrors(appointment, appointmentStatus, statusChangeValidators);
         validateUserPrivilege(appointment, appointmentStatus);
@@ -307,6 +341,39 @@ public class AppointmentsServiceImpl implements AppointmentsService {
         appointmentDao.save(appointment);
         String notes = onDate != null ? onDate.toInstant().toString() : null;
         createEventInAppointmentAudit(appointment, notes);
+        saveNotes(appointment, cancelNotes);
+    }
+
+    /**
+     * Fills in {@code defaultType} where the type is missing and rejects types the action doesn't
+     * allow, before anything is saved. Returns an empty list for null.
+     */
+    private List<AppointmentNote> prepareNotes(List<AppointmentNote> notes, AppointmentNoteType defaultType,
+                                               Set<AppointmentNoteType> allowedTypes) {
+        if (notes == null || notes.isEmpty()) {
+            return Collections.emptyList();
+        }
+        if (notes.size() > MAX_NOTES_PER_REQUEST) {
+            throw new AppointmentReasonException(AppointmentErrorReason.TOO_MANY_NOTES,
+                    "At most " + MAX_NOTES_PER_REQUEST + " notes can be added at once");
+        }
+        for (AppointmentNote note : notes) {
+            if (note.getNoteType() == null) {
+                note.setNoteType(defaultType);
+            }
+            if (!allowedTypes.contains(note.getNoteType())) {
+                throw new AppointmentReasonException(AppointmentErrorReason.NOTE_TYPE_NOT_ALLOWED,
+                        note.getNoteType() + " notes are not allowed here; allowed: " + allowedTypes);
+            }
+        }
+        return notes;
+    }
+
+    private void saveNotes(Appointment appointment, List<AppointmentNote> notes) {
+        for (AppointmentNote note : notes) {
+            note.setAppointment(appointment);
+            appointmentNoteService.addNote(note);
+        }
     }
 
     private void validateUserPrivilege(Appointment appointment, AppointmentStatus appointmentStatus) {
@@ -436,6 +503,16 @@ public class AppointmentsServiceImpl implements AppointmentsService {
     @Transactional
     @Override
     public Appointment reschedule(String originalAppointmentUuid, Appointment newAppointment, boolean retainAppointmentNumber) {
+        return reschedule(originalAppointmentUuid, newAppointment, retainAppointmentNumber, null);
+    }
+
+    @Transactional
+    @Override
+    public Appointment reschedule(String originalAppointmentUuid, Appointment newAppointment, boolean retainAppointmentNumber,
+                                  List<AppointmentNote> notesToAdd) {
+        List<AppointmentNote> notes = prepareNotes(notesToAdd, AppointmentNoteType.RESCHEDULE,
+                EnumSet.of(AppointmentNoteType.RESCHEDULE, AppointmentNoteType.REASON_FOR_VISIT,
+                        AppointmentNoteType.ADDITIONAL_INFO));
         Appointment prevAppointment = getAppointmentByUuid(originalAppointmentUuid);
         if (prevAppointment == null) {
             //TODO: should we match the new appointment uuid as well?
@@ -463,6 +540,12 @@ public class AppointmentsServiceImpl implements AppointmentsService {
             newAppointment.setStatus(AppointmentStatus.Confirmed);
             validateAndSave(newAppointment);
 
+            // The reason goes on the original (the appointment that didn't happen, like a cancel note);
+            // visit notes are for the visit that will happen
+            saveNotes(prevAppointment, notes.stream()
+                    .filter(n -> AppointmentNoteType.RESCHEDULE.equals(n.getNoteType())).collect(Collectors.toList()));
+            saveNotes(newAppointment, notes.stream()
+                    .filter(n -> n.getNoteType().isVisitNote()).collect(Collectors.toList()));
             return newAppointment;
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -509,6 +592,10 @@ public class AppointmentsServiceImpl implements AppointmentsService {
     }
     public void setAppointmentArgumentsMapper(AppointmentArgumentsMapper appointmentArgumentsMapper) {
         this.appointmentArgumentsMapper = appointmentArgumentsMapper;
+    }
+
+    public void setAppointmentNoteService(AppointmentNoteService appointmentNoteService) {
+        this.appointmentNoteService = appointmentNoteService;
     }
 
     @Transactional

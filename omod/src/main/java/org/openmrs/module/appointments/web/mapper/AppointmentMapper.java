@@ -20,6 +20,7 @@ import org.openmrs.api.ProviderService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentKind;
+import org.openmrs.module.appointments.model.AppointmentNote;
 import org.openmrs.module.appointments.model.AppointmentReason;
 import org.openmrs.module.appointments.model.AppointmentPriority;
 import org.openmrs.module.appointments.model.AppointmentProvider;
@@ -27,11 +28,13 @@ import org.openmrs.module.appointments.model.AppointmentProviderResponse;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.model.AppointmentServiceType;
 import org.openmrs.module.appointments.model.AppointmentStatus;
+import org.openmrs.module.appointments.service.AppointmentNoteService;
 import org.openmrs.module.appointments.service.AppointmentServiceDefinitionService;
 import org.openmrs.module.appointments.service.AppointmentsService;
 import org.openmrs.module.appointments.util.AppointmentDateOnlyUtil;
 import org.openmrs.module.appointments.web.contract.AppointmentBillSummary;
 import org.openmrs.module.appointments.web.contract.AppointmentDefaultResponse;
+import org.openmrs.module.appointments.web.contract.AppointmentNoteResponse;
 import org.openmrs.module.appointments.web.contract.AppointmentPaymentSummary;
 import org.openmrs.module.appointments.web.contract.AppointmentProviderDetail;
 import org.openmrs.module.appointments.web.contract.AppointmentQuery;
@@ -47,6 +50,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -77,17 +81,37 @@ public class AppointmentMapper {
     @Autowired
     ConceptService conceptService;
 
+    @Autowired
+    AppointmentNoteService appointmentNoteService;
+
+    @Autowired
+    AppointmentNoteMapper appointmentNoteMapper;
+
     @Autowired(required = false)
     AppointmentResponseExtension appointmentResponseExtension;
 
     private Log log = LogFactory.getLog(this.getClass());
 
     public List<AppointmentDefaultResponse> constructResponse(List<Appointment> appointments) {
-        return appointments.stream().map(as -> this.mapToDefaultResponse(as, new AppointmentDefaultResponse())).collect(Collectors.toList());
+        // One batched query for the whole page instead of one per appointment
+        Map<String, List<AppointmentNoteResponse>> notesByAppointment = new LinkedHashMap<>();
+        if (!appointments.isEmpty()) {
+            for (AppointmentNote note : appointmentNoteService.getNotes(appointments)) {
+                notesByAppointment.computeIfAbsent(note.getAppointment().getUuid(), k -> new ArrayList<>())
+                        .add(appointmentNoteMapper.constructResponse(note));
+            }
+        }
+        return appointments.stream().map(as -> {
+            AppointmentDefaultResponse response = this.mapToDefaultResponse(as, new AppointmentDefaultResponse());
+            response.setNotes(notesByAppointment.getOrDefault(as.getUuid(), new ArrayList<>()));
+            return response;
+        }).collect(Collectors.toList());
     }
 
     public AppointmentDefaultResponse constructResponse(Appointment appointment) {
-        return this.mapToDefaultResponse(appointment, new AppointmentDefaultResponse());
+        AppointmentDefaultResponse response = this.mapToDefaultResponse(appointment, new AppointmentDefaultResponse());
+        response.setNotes(appointmentNoteMapper.constructResponse(appointmentNoteService.getNotes(appointment, null)));
+        return response;
     }
 
     public Appointment fromRequest(AppointmentRequest appointmentRequest) {

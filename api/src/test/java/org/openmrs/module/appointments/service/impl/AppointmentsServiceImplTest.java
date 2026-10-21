@@ -29,6 +29,12 @@ import org.openmrs.module.appointments.model.AppointmentSearchRequestModel;
 import org.openmrs.module.appointments.model.AppointmentProviderResponse;
 import org.openmrs.module.appointments.model.AppointmentKind;
 import org.openmrs.module.appointments.model.AppointmentAudit;
+import org.openmrs.module.appointments.model.AppointmentNote;
+import org.openmrs.module.appointments.model.AppointmentNoteAuthorType;
+import org.openmrs.module.appointments.model.AppointmentNoteType;
+import org.openmrs.module.appointments.exception.AppointmentErrorReason;
+import org.openmrs.module.appointments.exception.AppointmentReasonException;
+import org.openmrs.module.appointments.service.AppointmentNoteService;
 import org.openmrs.module.appointments.service.AppointmentNumberGeneratorLocator;
 import org.openmrs.module.appointments.util.DateUtil;
 import org.openmrs.module.appointments.validator.AppointmentStatusChangeValidator;
@@ -133,6 +139,9 @@ public class AppointmentsServiceImplTest {
 
     @Mock
     private AppointmentNumberGeneratorLocator appointmentNumberGeneratorLocator;
+
+    @Mock
+    private AppointmentNoteService appointmentNoteService;
 
     @InjectMocks
     private AppointmentsServiceImpl appointmentsService;
@@ -957,5 +966,157 @@ public class AppointmentsServiceImplTest {
         
         verify(appointmentDao, times(1)).getAllAppointmentsReminder(hours);
         assertEquals(1, result.size());
+    }
+
+    @Test
+    public void shouldSaveCancelNotesWhenCancelling() {
+        Appointment appointment = new Appointment();
+        appointment.setStatus(AppointmentStatus.Scheduled);
+        AppointmentNote note = note(null, "Travelling that week");
+
+        appointmentsService.changeStatus(appointment, "Cancelled", null, Collections.singletonList(note));
+
+        assertEquals(AppointmentStatus.Cancelled, appointment.getStatus());
+        assertEquals(appointment, note.getAppointment());
+        assertEquals(AppointmentNoteType.CANCEL, note.getNoteType());
+        verify(appointmentNoteService, times(1)).addNote(note);
+    }
+
+    @Test
+    public void shouldNotSaveNotesWhenCancellingWithoutNotes() {
+        Appointment appointment = new Appointment();
+        appointment.setStatus(AppointmentStatus.Scheduled);
+
+        appointmentsService.changeStatus(appointment, "Cancelled", null);
+
+        assertEquals(AppointmentStatus.Cancelled, appointment.getStatus());
+        verify(appointmentNoteService, never()).addNote(any(AppointmentNote.class));
+    }
+
+    @Test
+    public void shouldRejectNotesWhenStatusChangeIsNotCancel() {
+        Appointment appointment = new Appointment();
+        appointment.setStatus(AppointmentStatus.Scheduled);
+
+        assertRejected(() -> appointmentsService.changeStatus(appointment, "CheckedIn", null,
+                Collections.singletonList(note(null, "note"))), AppointmentErrorReason.NOTE_TYPE_NOT_ALLOWED);
+
+        assertEquals(AppointmentStatus.Scheduled, appointment.getStatus());
+        verify(appointmentDao, never()).save(any(Appointment.class));
+    }
+
+    @Test
+    public void shouldRejectBookingNoteOnCancel() {
+        Appointment appointment = new Appointment();
+        appointment.setStatus(AppointmentStatus.Scheduled);
+
+        assertRejected(() -> appointmentsService.changeStatus(appointment, "Cancelled", null,
+                Collections.singletonList(note(AppointmentNoteType.REASON_FOR_VISIT, "note"))),
+                AppointmentErrorReason.NOTE_TYPE_NOT_ALLOWED);
+
+        assertEquals(AppointmentStatus.Scheduled, appointment.getStatus());
+    }
+
+    @Test
+    public void shouldSaveBookingNotesOnCreate() {
+        Appointment appointment = newAppointment();
+        AppointmentNote first = note(null, "Fever since Monday");
+        AppointmentNote second = note(AppointmentNoteType.REASON_FOR_VISIT, "Bring old reports");
+
+        appointmentsService.validateAndSave(() -> appointment, asList(first, second));
+
+        verify(appointmentDao, times(1)).save(appointment);
+        assertEquals(AppointmentNoteType.REASON_FOR_VISIT, first.getNoteType());
+        assertEquals(appointment, first.getAppointment());
+        assertEquals(appointment, second.getAppointment());
+        verify(appointmentNoteService, times(1)).addNote(first);
+        verify(appointmentNoteService, times(1)).addNote(second);
+    }
+
+    @Test
+    public void shouldRejectNonBookingNoteOnCreateBeforeSaving() {
+        Appointment appointment = newAppointment();
+
+        assertRejected(() -> appointmentsService.validateAndSave(() -> appointment,
+                Collections.singletonList(note(AppointmentNoteType.CANCEL, "note"))),
+                AppointmentErrorReason.NOTE_TYPE_NOT_ALLOWED);
+
+        verify(appointmentDao, never()).save(any(Appointment.class));
+    }
+
+    @Test
+    public void shouldRejectTooManyNotes() {
+        Appointment appointment = newAppointment();
+        List<AppointmentNote> notes = new ArrayList<>();
+        for (int i = 0; i <= AppointmentsServiceImpl.MAX_NOTES_PER_REQUEST; i++) {
+            notes.add(note(null, "note " + i));
+        }
+
+        assertRejected(() -> appointmentsService.validateAndSave(() -> appointment, notes),
+                AppointmentErrorReason.TOO_MANY_NOTES);
+
+        verify(appointmentDao, never()).save(any(Appointment.class));
+    }
+
+    @Test
+    public void shouldSplitRescheduleNotesBetweenOriginalAndNewAppointment() {
+        Appointment original = new Appointment();
+        original.setUuid("original-uuid");
+        original.setStatus(AppointmentStatus.Scheduled);
+        when(appointmentDao.getAppointmentByUuid("original-uuid")).thenReturn(original);
+        Appointment rescheduled = newAppointment();
+        AppointmentNote reason = note(null, "Clashes with an exam");
+        AppointmentNote bookingNote = note(AppointmentNoteType.REASON_FOR_VISIT, "Still have fever");
+
+        appointmentsService.reschedule("original-uuid", rescheduled, false, asList(reason, bookingNote));
+
+        assertEquals(AppointmentStatus.Cancelled, original.getStatus());
+        assertEquals(AppointmentNoteType.RESCHEDULE, reason.getNoteType());
+        assertEquals(original, reason.getAppointment());
+        assertEquals(rescheduled, bookingNote.getAppointment());
+        verify(appointmentNoteService, times(1)).addNote(reason);
+        verify(appointmentNoteService, times(1)).addNote(bookingNote);
+    }
+
+    @Test
+    public void shouldRejectCancelNoteOnRescheduleBeforeCancellingOriginal() {
+        Appointment original = new Appointment();
+        original.setStatus(AppointmentStatus.Scheduled);
+        when(appointmentDao.getAppointmentByUuid("original-uuid")).thenReturn(original);
+
+        assertRejected(() -> appointmentsService.reschedule("original-uuid", newAppointment(), false,
+                Collections.singletonList(note(AppointmentNoteType.CANCEL, "note"))),
+                AppointmentErrorReason.NOTE_TYPE_NOT_ALLOWED);
+
+        assertEquals(AppointmentStatus.Scheduled, original.getStatus());
+    }
+
+    private Appointment newAppointment() {
+        Appointment appointment = new Appointment();
+        appointment.setPatient(new Patient());
+        appointment.setService(new AppointmentServiceDefinition());
+        appointment.setStartDateTime(new Date());
+        appointment.setEndDateTime(new Date());
+        appointment.setAppointmentKind(AppointmentKind.Scheduled);
+        appointment.setAppointmentAudits(new HashSet<>());
+        return appointment;
+    }
+
+    private AppointmentNote note(AppointmentNoteType type, String text) {
+        AppointmentNote note = new AppointmentNote();
+        note.setNoteType(type);
+        note.setAuthorType(AppointmentNoteAuthorType.PATIENT);
+        note.setNote(text);
+        return note;
+    }
+
+    private void assertRejected(Runnable call, AppointmentErrorReason reason) {
+        try {
+            call.run();
+            org.junit.Assert.fail("Expected AppointmentReasonException");
+        } catch (AppointmentReasonException e) {
+            assertEquals(reason, e.getReason());
+        }
+        verify(appointmentNoteService, never()).addNote(any(AppointmentNote.class));
     }
 }

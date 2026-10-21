@@ -4,6 +4,7 @@ package org.openmrs.module.appointments.service;
 import org.openmrs.annotation.Authorized;
 
 import org.openmrs.module.appointments.model.Appointment;
+import org.openmrs.module.appointments.model.AppointmentNote;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.model.AppointmentServiceType;
 import org.openmrs.module.appointments.model.AppointmentStatus;
@@ -62,6 +63,10 @@ public interface AppointmentsService {
     void changeStatus(Appointment appointment, String status, Date onDate);
 
     @Transactional
+    @Authorized({MANAGE_APPOINTMENTS, MANAGE_OWN_APPOINTMENTS})
+    void changeStatus(Appointment appointment, String status, Date onDate, List<AppointmentNote> notes);
+
+    @Transactional
     @Authorized({VIEW_APPOINTMENTS, MANAGE_APPOINTMENTS})
     List<Appointment> getAllAppointmentsInDateRange(Date startDate, Date endDate);
 
@@ -76,6 +81,10 @@ public interface AppointmentsService {
     @Transactional
     @Authorized({MANAGE_APPOINTMENTS})
     Appointment reschedule(String originalAppointmentUuid, Appointment appointment, boolean retainAppointmentNumber);
+    @Transactional
+    @Authorized({MANAGE_APPOINTMENTS})
+    Appointment reschedule(String originalAppointmentUuid, Appointment appointment, boolean retainAppointmentNumber,
+                           List<AppointmentNote> notes);
 
     @Transactional
     @Authorized({MANAGE_APPOINTMENTS, MANAGE_OWN_APPOINTMENTS})
@@ -105,6 +114,10 @@ public interface AppointmentsService {
     @Transactional
     @Authorized({MANAGE_APPOINTMENTS, MANAGE_OWN_APPOINTMENTS})
     Appointment validateAndSave(Supplier<Appointment> mapper);
+
+    @Transactional
+    @Authorized({MANAGE_APPOINTMENTS, MANAGE_OWN_APPOINTMENTS})
+    Appointment validateAndSave(Supplier<Appointment> mapper, List<AppointmentNote> notes);
 
     @Transactional
     @Authorized({VIEW_APPOINTMENTS, MANAGE_APPOINTMENTS})

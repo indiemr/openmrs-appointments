@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd" >
+<hibernate-mapping package="org.openmrs.module.appointments.model">
+    <class name="AppointmentNote" table="patient_appointment_note" batch-size="50">
+        <id name="appointmentNoteId" type="java.lang.Integer" column="id">
+            <generator class="native">
+                <param name="sequence">patient_appointment_note_id_seq</param>
+            </generator>
+        </id>
+        <many-to-one name="appointment" class="org.openmrs.module.appointments.model.Appointment"
+                     column="patient_appointment_id" not-null="true"/>
+        <property name="noteType" column="note_type" not-null="true">
+            <type name="org.hibernate.type.EnumType">
+                <param name="enumClass">org.openmrs.module.appointments.model.AppointmentNoteType</param>
+                <param name="useNamed">true</param>
+            </type>
+        </property>
+        <property name="authorType" column="author_type" not-null="true">
+            <type name="org.hibernate.type.EnumType">
+                <param name="enumClass">org.openmrs.module.appointments.model.AppointmentNoteAuthorType</param>
+                <param name="useNamed">true</param>
+            </type>
+        </property>
+        <many-to-one name="provider" class="org.openmrs.Provider" column="provider_id"/>
+        <property name="note" type="java.lang.String" column="note" length="1000" not-null="true"/>
+        <property name="uuid" type="java.lang.String" column="uuid" length="38" unique="true" not-null="true"/>
+        <property name="dateCreated" type="java.util.Date" column="date_created" not-null="true"/>
+        <property name="voided" type="java.lang.Boolean" column="voided" length="1" not-null="true"/>
+        <property name="dateVoided" type="java.util.Date" column="date_voided" length="19"/>
+        <property name="voidReason" type="java.lang.String" column="void_reason" length="255"/>
+        <many-to-one name="voidedBy" class="org.openmrs.User" column="voided_by"/>
+        <many-to-one name="creator" class="org.openmrs.User" column="creator" not-null="true"/>
+    </class>
+</hibernate-mapping>
