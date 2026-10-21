@@ -1308,4 +1308,62 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="create_patient_appointment_note-20261021" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="patient_appointment_note"/>
+            </not>
+        </preConditions>
+        <comment>Append-only notes on why an appointment was booked, rescheduled or cancelled; doctor notes stay in patient_appointment.comments</comment>
+        <createTable tableName="patient_appointment_note">
+            <column name="id" type="int" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="uuid" type="varchar(38)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="patient_appointment_id" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="note_type" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="author_type" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="provider_id" type="int"/>
+            <column name="note" type="varchar(1000)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creator" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voided" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voided_by" type="int"/>
+            <column name="date_voided" type="datetime"/>
+            <column name="void_reason" type="varchar(255)"/>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_patient_appointment_note_appointment"
+            baseTableName="patient_appointment_note" baseColumnNames="patient_appointment_id"
+            referencedTableName="patient_appointment" referencedColumnNames="patient_appointment_id"/>
+        <addForeignKeyConstraint constraintName="fk_patient_appointment_note_provider"
+            baseTableName="patient_appointment_note" baseColumnNames="provider_id"
+            referencedTableName="provider" referencedColumnNames="provider_id"/>
+        <addForeignKeyConstraint constraintName="fk_patient_appointment_note_creator"
+            baseTableName="patient_appointment_note" baseColumnNames="creator"
+            referencedTableName="users" referencedColumnNames="user_id"/>
+        <addForeignKeyConstraint constraintName="fk_patient_appointment_note_voided_by"
+            baseTableName="patient_appointment_note" baseColumnNames="voided_by"
+            referencedTableName="users" referencedColumnNames="user_id"/>
+        <createIndex indexName="idx_patient_appointment_note_appointment_type" tableName="patient_appointment_note">
+            <column name="patient_appointment_id"/>
+            <column name="note_type"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>

@@ -31,6 +31,8 @@ public class AppointmentRequest {
     private List<AppointmentPayment> payments;
     private Boolean dateOnly = false;
     private String appointmentDate; // "yyyy-MM-dd"
+    // Notes to add (REASON_FOR_VISIT/ADDITIONAL_INFO on create/edit, plus RESCHEDULE on reschedule). Entries with a uuid are skipped
+    private List<AppointmentNoteRequest> notes;
 
     public Boolean getCreateBill() {
         return createBill;
@@ -198,5 +200,13 @@ public class AppointmentRequest {
 
     public void setAppointmentDate(String appointmentDate) {
         this.appointmentDate = appointmentDate;
+    }
+
+    public List<AppointmentNoteRequest> getNotes() {
+        return notes;
+    }
+
+    public void setNotes(List<AppointmentNoteRequest> notes) {
+        this.notes = notes;
     }
 }

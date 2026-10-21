@@ -3,6 +3,7 @@ package org.openmrs.module.appointments.web.controller;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.module.appointments.model.Appointment;
+import org.openmrs.module.appointments.model.AppointmentNote;
 import org.openmrs.module.appointments.model.AppointmentPayment;
 import org.openmrs.module.appointments.model.AppointmentProvider;
 import org.openmrs.module.appointments.model.AppointmentSearchRequest;
@@ -14,6 +15,7 @@ import org.openmrs.module.appointments.web.contract.AppointmentDefaultResponse;
 import org.openmrs.module.appointments.web.contract.AppointmentProviderDetail;
 import org.openmrs.module.appointments.web.contract.AppointmentRequest;
 import org.openmrs.module.appointments.web.mapper.AppointmentMapper;
+import org.openmrs.module.appointments.web.mapper.AppointmentNoteMapper;
 import org.openmrs.module.appointments.web.validators.AppointmentSearchValidator;
 import org.openmrs.module.webservices.rest.web.RestConstants;
 import org.openmrs.module.webservices.rest.web.RestUtil;
@@ -54,6 +56,9 @@ public class AppointmentsController extends BaseRestController {
     @Autowired
     private AppointmentSearchValidator appointmentSearchValidator;
 
+    @Autowired
+    private AppointmentNoteMapper appointmentNoteMapper;
+
     private Log log = LogFactory.getLog(this.getClass());
 
     @RequestMapping(method = RequestMethod.GET, value="/{uuid}")
@@ -78,7 +83,8 @@ public class AppointmentsController extends BaseRestController {
     public ResponseEntity<Object> saveAppointment(@Valid @RequestBody AppointmentRequest appointmentRequest) throws IOException {
         try {
             appointmentRequest.setUuid(null);
-            Appointment appointment = appointmentsService.validateAndSave(() -> appointmentMapper.fromRequest(appointmentRequest));
+            List<AppointmentNote> notes = appointmentNoteMapper.fromRequests(appointmentRequest.getNotes());
+            Appointment appointment = appointmentsService.validateAndSave(() -> appointmentMapper.fromRequest(appointmentRequest), notes);
             return new ResponseEntity<>(appointmentMapper.constructResponse(appointment), HttpStatus.OK);
         }catch (RuntimeException e) {
             log.error("Runtime error while trying to create new appointment", e);
@@ -118,12 +124,14 @@ public class AppointmentsController extends BaseRestController {
 
     @RequestMapping(method = RequestMethod.POST, value = "/{appointmentUuid}/status-change")
     @ResponseBody
-    public ResponseEntity<Object> transitionAppointment(@PathVariable("appointmentUuid") String appointmentUuid, @RequestBody Map<String, String> statusDetails) throws ParseException {
-        String toStatus = statusDetails.get("toStatus");
-        Date onDate = DateUtil.convertToLocalDateFromUTC(statusDetails.get("onDate"));
+    public ResponseEntity<Object> transitionAppointment(@PathVariable("appointmentUuid") String appointmentUuid, @RequestBody Map<String, Object> statusDetails) throws ParseException {
+        String toStatus = (String) statusDetails.get("toStatus");
+        Date onDate = DateUtil.convertToLocalDateFromUTC((String) statusDetails.get("onDate"));
         Appointment appointment = appointmentsService.getAppointmentByUuid(appointmentUuid);
         if (appointment != null) {
-            appointmentsService.changeStatus(appointment, toStatus, onDate);
+            // Optional cancel reasons: "notes": [{ "noteType": "CANCEL", "authorType": "PATIENT|PROVIDER", "note": "..." }]
+            List<AppointmentNote> notes = appointmentNoteMapper.fromJson(statusDetails.get("notes"));
+            appointmentsService.changeStatus(appointment, toStatus, onDate, notes);
             return new ResponseEntity<>(appointmentMapper.constructResponse(appointment), HttpStatus.OK);
         } else
             throw new RuntimeException("Appointment does not exist");

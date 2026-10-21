@@ -211,6 +211,7 @@
                     <ref bean="patientAppointmentNotifierService"/>
                 </property>
                 <property name="appointmentNumberGeneratorLocator" ref="appointmentNumberGeneratorLocator"/>
+                <property name="appointmentNoteService" ref="appointmentNoteService"/>
             </bean>
         </property>
         <property name="preInterceptors">
@@ -335,6 +336,30 @@
             <list merge="true">
                 <value>org.openmrs.module.appointments.service.AppointmentHoldService</value>
                 <ref bean="appointmentHoldService"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="appointmentNoteDao" class="org.openmrs.module.appointments.dao.impl.AppointmentNoteDaoImpl">
+        <property name="sessionFactory" ref="sessionFactory"/>
+    </bean>
+
+    <bean id="appointmentNoteService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager" ref="transactionManager"/>
+        <property name="target">
+            <bean class="org.openmrs.module.appointments.service.impl.AppointmentNoteServiceImpl">
+                <property name="appointmentNoteDao" ref="appointmentNoteDao"/>
+            </bean>
+        </property>
+        <property name="preInterceptors" ref="serviceInterceptors"/>
+        <property name="transactionAttributeSource" ref="transactionAttributeSource"/>
+    </bean>
+
+    <bean parent="serviceContext">
+        <property name="moduleService">
+            <list merge="true">
+                <value>org.openmrs.module.appointments.service.AppointmentNoteService</value>
+                <ref bean="appointmentNoteService"/>
             </list>
         </property>
     </bean>

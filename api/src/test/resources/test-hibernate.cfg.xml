@@ -18,5 +18,6 @@
 		<mapping resource="AppointmentRecurringPattern.hbm.xml"/>
         <mapping resource="AppointmentUnavailability.hbm.xml"/>
        	<mapping resource="AppointmentHold.hbm.xml"/>
+		<mapping resource="AppointmentNote.hbm.xml"/>
 	</session-factory>
 </hibernate-configuration>

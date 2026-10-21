@@ -52,6 +52,7 @@
 		AppointmentReason.hbm.xml
 		AppointmentUnavailability.hbm.xml
 		AppointmentHold.hbm.xml
+		AppointmentNote.hbm.xml
 	</mappingFiles>
 
 	<!-- Internationalization -->

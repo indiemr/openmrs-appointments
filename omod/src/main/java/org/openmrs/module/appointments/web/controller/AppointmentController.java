@@ -3,6 +3,7 @@ package org.openmrs.module.appointments.web.controller;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.module.appointments.model.Appointment;
+import org.openmrs.module.appointments.model.AppointmentNote;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.model.AppointmentServiceType;
 import org.openmrs.module.appointments.model.AppointmentStatus;
@@ -13,6 +14,7 @@ import org.openmrs.module.appointments.service.AppointmentsService;
 import org.openmrs.module.appointments.util.DateUtil;
 import org.openmrs.module.appointments.web.contract.*;
 import org.openmrs.module.appointments.web.mapper.AppointmentMapper;
+import org.openmrs.module.appointments.web.mapper.AppointmentNoteMapper;
 import org.openmrs.module.appointments.web.mapper.AppointmentServiceMapper;
 import org.openmrs.module.webservices.rest.web.RestConstants;
 import org.openmrs.module.webservices.rest.web.RestUtil;
@@ -48,6 +50,9 @@ public class AppointmentController extends BaseRestController {
     @Autowired
     private AppointmentServiceMapper appointmentServiceMapper;
 
+    @Autowired
+    private AppointmentNoteMapper appointmentNoteMapper;
+
     @RequestMapping(method = RequestMethod.GET, value = "all")
     @ResponseBody
     public List<AppointmentDefaultResponse> getAllAppointments(@RequestParam(value = "forDate", required = false) String forDate) throws ParseException {
@@ -78,7 +83,8 @@ public class AppointmentController extends BaseRestController {
              * start another transaction, and before that the dirty persistent entity will be flushed to DB.
              * appointmentMapper should be fixed and validateAndSave() signature should be changed.
              */
-            Appointment appointment = appointmentsService.validateAndSave(() -> appointmentMapper.fromRequest(appointmentRequest));
+            List<AppointmentNote> notes = appointmentNoteMapper.fromRequests(appointmentRequest.getNotes());
+            Appointment appointment = appointmentsService.validateAndSave(() -> appointmentMapper.fromRequest(appointmentRequest), notes);
             return new ResponseEntity<>(appointmentMapper.constructResponse(appointment), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Runtime error while trying to create new appointment", e);
@@ -190,7 +196,8 @@ public class AppointmentController extends BaseRestController {
         try {
             appointmentRequest.setUuid(null);
             Appointment appointment = appointmentMapper.fromRequest(appointmentRequest);
-            Appointment rescheduledAppointment = appointmentsService.reschedule(prevAppointmentUuid, appointment, false);
+            List<AppointmentNote> notes = appointmentNoteMapper.fromRequests(appointmentRequest.getNotes());
+            Appointment rescheduledAppointment = appointmentsService.reschedule(prevAppointmentUuid, appointment, false, notes);
             return new ResponseEntity<>(appointmentMapper.constructResponse(rescheduledAppointment), HttpStatus.OK);
         } catch (RuntimeException e) {
             log.error("Runtime error while trying to create new appointment", e);
