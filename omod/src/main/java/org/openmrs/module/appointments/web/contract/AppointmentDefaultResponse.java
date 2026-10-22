@@ -34,6 +34,9 @@ public class AppointmentDefaultResponse {
 	private Boolean dateOnly;
 	private String appointmentDate; // return as "yyyy-MM-dd", not epoch
 	private List<AppointmentNoteResponse> notes = new ArrayList<>();
+	private String source; // CLINIC, PORTAL or PARTNER
+	private String sourcePartner; // PARTNER only
+	private String externalRef; // partner's booking id, if given
 
 	public String getUuid() {
 		return uuid;
@@ -248,5 +251,29 @@ public class AppointmentDefaultResponse {
 
 	public void setNotes(List<AppointmentNoteResponse> notes) {
 		this.notes = notes;
+	}
+
+	public String getSource() {
+		return source;
+	}
+
+	public void setSource(String source) {
+		this.source = source;
+	}
+
+	public String getSourcePartner() {
+		return sourcePartner;
+	}
+
+	public void setSourcePartner(String sourcePartner) {
+		this.sourcePartner = sourcePartner;
+	}
+
+	public String getExternalRef() {
+		return externalRef;
+	}
+
+	public void setExternalRef(String externalRef) {
+		this.externalRef = externalRef;
 	}
 }

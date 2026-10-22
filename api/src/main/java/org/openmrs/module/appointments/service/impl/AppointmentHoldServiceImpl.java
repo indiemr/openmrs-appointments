@@ -6,6 +6,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openmrs.Patient;
 import org.openmrs.Provider;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.appointments.helper.ResourceSourceHelper;
 import org.openmrs.module.appointments.dao.AppointmentDao;
 import org.openmrs.module.appointments.dao.AppointmentHoldDao;
 import org.openmrs.module.appointments.exception.AppointmentErrorReason;
@@ -71,7 +72,10 @@ public class AppointmentHoldServiceImpl implements AppointmentHoldService {
         }
         try {
             validatePatientHoldLimits(hold.getPatient());
-            return holdSlot(hold);
+            AppointmentHold saved = holdSlot(hold);
+            // Same transaction as the hold insert, so a failure here rolls the hold back too
+            ResourceSourceHelper.recordHold(saved);
+            return saved;
         } finally {
             appointmentHoldDao.releaseSlotLock(patientLockKey);
         }

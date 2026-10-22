@@ -2,6 +2,7 @@ package org.openmrs.module.appointments.model;
 
 import org.openmrs.BaseOpenmrsData;
 import org.openmrs.Patient;
+import org.openmrs.module.indiemrcore.resourcesource.model.ResourceSource;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -16,6 +17,10 @@ public class AppointmentHold extends BaseOpenmrsData implements Serializable {
     private AppointmentHoldStatus status;
     private Date expiresAt;
     private String notes;
+
+    private ResourceSource source;
+    private String sourcePartner;
+    private String externalRef;
 
     @Override
     public Integer getId() {
@@ -45,4 +50,10 @@ public class AppointmentHold extends BaseOpenmrsData implements Serializable {
     public void setExpiresAt(Date expiresAt) { this.expiresAt = expiresAt; }
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+    public ResourceSource getSource() { return source; }
+    public void setSource(ResourceSource source) { this.source = source; }
+    public String getSourcePartner() { return sourcePartner; }
+    public void setSourcePartner(String sourcePartner) { this.sourcePartner = sourcePartner; }
+    public String getExternalRef() { return externalRef; }
+    public void setExternalRef(String externalRef) { this.externalRef = externalRef; }
 }

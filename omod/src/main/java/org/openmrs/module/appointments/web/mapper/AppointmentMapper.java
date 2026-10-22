@@ -18,6 +18,10 @@ import org.openmrs.api.LocationService;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.ProviderService;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.indiemrcore.resourcesource.api.IndiemrResourceSourceService;
+import org.openmrs.module.indiemrcore.resourcesource.model.IndiemrResourceSource;
+import org.openmrs.module.indiemrcore.resourcesource.model.ResourceSource;
+import org.openmrs.module.indiemrcore.resourcesource.model.ResourceType;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentKind;
 import org.openmrs.module.appointments.model.AppointmentNote;
@@ -95,15 +99,20 @@ public class AppointmentMapper {
     public List<AppointmentDefaultResponse> constructResponse(List<Appointment> appointments) {
         // One batched query for the whole page instead of one per appointment
         Map<String, List<AppointmentNoteResponse>> notesByAppointment = new LinkedHashMap<>();
+        Map<String, IndiemrResourceSource> sourceByAppointment = new HashMap<>();
         if (!appointments.isEmpty()) {
             for (AppointmentNote note : appointmentNoteService.getNotes(appointments)) {
                 notesByAppointment.computeIfAbsent(note.getAppointment().getUuid(), k -> new ArrayList<>())
                         .add(appointmentNoteMapper.constructResponse(note));
             }
+            sourceByAppointment = resourceSourceService().getAll(ResourceType.APPOINTMENT,
+                    appointments.stream().map(Appointment::getUuid).collect(Collectors.toList()));
         }
+        Map<String, IndiemrResourceSource> sources = sourceByAppointment;
         return appointments.stream().map(as -> {
             AppointmentDefaultResponse response = this.mapToDefaultResponse(as, new AppointmentDefaultResponse());
             response.setNotes(notesByAppointment.getOrDefault(as.getUuid(), new ArrayList<>()));
+            setSource(response, sources.get(as.getUuid()));
             return response;
         }).collect(Collectors.toList());
     }
@@ -111,7 +120,19 @@ public class AppointmentMapper {
     public AppointmentDefaultResponse constructResponse(Appointment appointment) {
         AppointmentDefaultResponse response = this.mapToDefaultResponse(appointment, new AppointmentDefaultResponse());
         response.setNotes(appointmentNoteMapper.constructResponse(appointmentNoteService.getNotes(appointment, null)));
+        setSource(response, resourceSourceService().get(ResourceType.APPOINTMENT, appointment.getUuid()));
         return response;
+    }
+
+    /** No recorded source means the appointment was created at the clinic. */
+    private void setSource(AppointmentDefaultResponse response, IndiemrResourceSource source) {
+        response.setSource(source != null ? source.getSource().name() : ResourceSource.CLINIC.name());
+        response.setSourcePartner(source != null ? source.getSourcePartner() : null);
+        response.setExternalRef(source != null ? source.getExternalRef() : null);
+    }
+
+    private IndiemrResourceSourceService resourceSourceService() {
+        return Context.getService(IndiemrResourceSourceService.class);
     }
 
     public Appointment fromRequest(AppointmentRequest appointmentRequest) {

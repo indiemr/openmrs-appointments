@@ -17,6 +17,7 @@
 		<require_module>org.bahmni.module.teleconsultation</require_module>
 		<require_module version="1.3.3">org.openmrs.module.billing</require_module>
 		<require_module version="1.0.0">org.openmrs.module.indiemroauthprovider</require_module>
+		<require_module>org.openmrs.module.indiemrcore</require_module>
 	</require_modules>
 
 	<aware_of_modules>
