@@ -350,6 +350,23 @@ public class AppointmentBillingServiceImplTest {
     }
 
     @Test
+    public void shouldSkipVoidWhenPendingBillHasPayments() {
+        Appointment appointment = new Appointment();
+        appointment.setBillUuid("bill");
+        when(appointmentDao.getAppointmentByUuid("appt")).thenReturn(appointment);
+        Bill bill = new Bill();
+        // paid then fully refunded: back to PENDING but the payments remain
+        bill.setStatus(BillStatus.PENDING);
+        Payment payment = new Payment();
+        payment.setVoided(false);
+        bill.setPayments(new HashSet<>(Collections.singletonList(payment)));
+        when(billService.getByUuid("bill")).thenReturn(bill);
+
+        service.voidBillForAppointment("appt", "cancelled");
+        verify(billService, never()).voidEntity(any(Bill.class), any());
+    }
+
+    @Test
     public void shouldVoidPendingBill() {
         Appointment appointment = new Appointment();
         appointment.setUuid("appt");
