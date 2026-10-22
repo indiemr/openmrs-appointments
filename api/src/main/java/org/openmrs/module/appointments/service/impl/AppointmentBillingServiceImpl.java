@@ -28,6 +28,7 @@ import org.openmrs.module.billing.api.model.BillStatus;
 import org.openmrs.module.billing.api.model.BillableService;
 import org.openmrs.module.billing.api.model.CashPoint;
 import org.openmrs.module.billing.api.model.CashierItemPrice;
+import org.openmrs.module.billing.api.model.Payment;
 import org.openmrs.module.billing.api.model.PaymentAttribute;
 import org.openmrs.module.billing.api.model.PaymentMode;
 import org.openmrs.module.billing.api.model.PaymentModeAttributeType;
@@ -204,9 +205,27 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
             return;
         }
 
+        // A fully refunded bill is PENDING again; keep it so its payment history stays visible
+        if (hasPayments(bill)) {
+            log.warn("Bill " + bill.getUuid() + " has payments; not voiding on appointment cancel");
+            return;
+        }
+
         // Only auto-void PENDING bills
         billService.voidEntity(bill, voidReason);
         log.info("Voided bill " + bill.getUuid() + " for cancelled appointment " + appointment.getUuid());
+    }
+
+    private boolean hasPayments(Bill bill) {
+        if (bill.getPayments() == null) {
+            return false;
+        }
+        for (Payment payment : bill.getPayments()) {
+            if (payment != null && !Boolean.TRUE.equals(payment.getVoided())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
