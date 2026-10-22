@@ -8,6 +8,7 @@ import org.openmrs.Person;
 import org.openmrs.api.APIAuthenticationException;
 import org.openmrs.api.APIException;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.appointments.helper.ResourceSourceHelper;
 import org.openmrs.module.appointments.conflicts.AppointmentConflict;
 import org.openmrs.module.appointments.dao.AppointmentAuditDao;
 import org.openmrs.module.appointments.dao.AppointmentDao;
@@ -237,8 +238,16 @@ public class AppointmentsServiceImpl implements AppointmentsService {
 
 
     private void save(Appointment appointment) {
+        save(appointment, true);
+    }
+
+    private void save(Appointment appointment, boolean recordSource) {
+        boolean isNew = appointment.getId() == null;
         createAndSetAppointmentAudit(appointment);
         appointmentDao.save(appointment);
+        if (isNew && recordSource) {
+            ResourceSourceHelper.recordAppointmentFromHold(appointment);
+        }
     }
 
     @Transactional
@@ -538,7 +547,11 @@ public class AppointmentsServiceImpl implements AppointmentsService {
                 newAppointment.setAppointmentNumber(prevAppointment.getAppointmentNumber());
             }
             newAppointment.setStatus(AppointmentStatus.Confirmed);
-            validateAndSave(newAppointment);
+            // A reschedule is not a new booking, so no source is recorded for the new row
+            validate(newAppointment, appointmentValidators);
+            checkAndAssignAppointmentNumber(newAppointment);
+            save(newAppointment, false);
+            notifyUpdates(newAppointment);
 
             // The reason goes on the original (the appointment that didn't happen, like a cancel note);
             // visit notes are for the visit that will happen

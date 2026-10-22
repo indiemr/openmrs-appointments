@@ -44,6 +44,10 @@ import org.openmrs.module.appointments.web.contract.AppointmentQuery;
 import org.openmrs.module.appointments.web.contract.AppointmentRequest;
 import org.openmrs.module.appointments.web.contract.AppointmentServiceDefaultResponse;
 import org.openmrs.module.appointments.web.extension.AppointmentResponseExtension;
+import org.openmrs.module.indiemrcore.resourcesource.api.IndiemrResourceSourceService;
+import org.openmrs.module.indiemrcore.resourcesource.model.IndiemrResourceSource;
+import org.openmrs.module.indiemrcore.resourcesource.model.ResourceSource;
+import org.openmrs.module.indiemrcore.resourcesource.model.ResourceType;
 import org.openmrs.module.webservices.rest.web.response.ConversionException;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -67,7 +71,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -106,6 +112,9 @@ public class AppointmentMapperTest {
 
     @Mock
     private AppointmentResponseExtension extension;
+
+    @Mock
+    private IndiemrResourceSourceService resourceSourceService;
 
     @Mock
     private ConceptService conceptService;
@@ -184,6 +193,7 @@ public class AppointmentMapperTest {
         when(Context.getAdministrationService()).thenReturn(administrationService);
         when(administrationService.getGlobalProperty(PERSON_ATTRIBUTE_TYPE_GLOBAL_PROPERTY)).thenReturn(PERSON_ATTRIBUTE_TYPE_GLOBAL_PROPERTY_VALUES);
         when(Context.getLocale()).thenReturn(java.util.Locale.ENGLISH);
+        when(Context.getService(IndiemrResourceSourceService.class)).thenReturn(resourceSourceService);
 
         // Setup test concepts for appointment reasons
         reasonConcept1 = new Concept();
@@ -392,6 +402,38 @@ public class AppointmentMapperTest {
         assertEquals(false, response.getExtensions().get("patientEmailDefined"));
     }
 
+
+    @Test
+    public void shouldDefaultSourceToClinicWhenNoneRecorded() throws Exception {
+        Appointment appointment = createAppointment();
+        when(appointmentServiceMapper.constructDefaultResponse(service)).thenReturn(new AppointmentServiceDefaultResponse());
+
+        AppointmentDefaultResponse response = appointmentMapper.constructResponse(appointment);
+
+        assertEquals("CLINIC", response.getSource());
+        assertNull(response.getSourcePartner());
+        assertNull(response.getExternalRef());
+    }
+
+    @Test
+    public void shouldIncludeRecordedSourceInListResponse() throws Exception {
+        Appointment appointment = createAppointment();
+        when(appointmentServiceMapper.constructDefaultResponse(service)).thenReturn(new AppointmentServiceDefaultResponse());
+        IndiemrResourceSource source = new IndiemrResourceSource();
+        source.setResourceUuid(appointment.getUuid());
+        source.setSource(ResourceSource.PARTNER);
+        source.setSourcePartner("practo");
+        source.setExternalRef("PR-88123457");
+        Map<String, IndiemrResourceSource> sources = new HashMap<>();
+        sources.put(appointment.getUuid(), source);
+        when(resourceSourceService.getAll(eq(ResourceType.APPOINTMENT), anyCollection())).thenReturn(sources);
+
+        List<AppointmentDefaultResponse> responses = appointmentMapper.constructResponse(Collections.singletonList(appointment));
+
+        assertEquals("PARTNER", responses.get(0).getSource());
+        assertEquals("practo", responses.get(0).getSourcePartner());
+        assertEquals("PR-88123457", responses.get(0).getExternalRef());
+    }
 
     @Test
     public void shouldCreateDefaultResponseForSingleAppointment() throws Exception {
