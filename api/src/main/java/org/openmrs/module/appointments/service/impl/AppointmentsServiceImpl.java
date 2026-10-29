@@ -242,10 +242,10 @@ public class AppointmentsServiceImpl implements AppointmentsService {
     }
 
     private void save(Appointment appointment, boolean recordSource) {
-        boolean isNew = appointment.getId() == null;
         createAndSetAppointmentAudit(appointment);
         appointmentDao.save(appointment);
-        if (isNew && recordSource) {
+        // A hold can also convert an existing appointment (tentative confirm), not only create one
+        if (recordSource && StringUtils.isNotBlank(appointment.getConvertingHoldUuid())) {
             ResourceSourceHelper.recordAppointmentFromHold(appointment);
         }
     }
