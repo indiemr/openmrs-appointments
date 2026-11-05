@@ -23,7 +23,10 @@ public final class ResourceSourceHelper {
                 hold.getSourcePartner(), hold.getExternalRef());
     }
 
-    /** Copies the converting hold's source onto a newly created appointment. */
+    /**
+     * Copies the converting hold's source onto the appointment it booked: a new appointment, or an
+     * existing one the hold converted (tentative confirm). An appointment keeps its first source.
+     */
     public static void recordAppointmentFromHold(Appointment appointment) {
         String holdUuid = appointment.getConvertingHoldUuid();
         if (StringUtils.isBlank(holdUuid)) {
@@ -31,6 +34,10 @@ public final class ResourceSourceHelper {
         }
         IndiemrResourceSource holdSource = service().get(ResourceType.APPOINTMENT_HOLD, holdUuid);
         if (holdSource == null) {
+            return;
+        }
+        // convertingHoldUuid stays set, so later saves of the same appointment come through here too
+        if (service().get(ResourceType.APPOINTMENT, appointment.getUuid()) != null) {
             return;
         }
         service().record(ResourceType.APPOINTMENT, appointment.getUuid(), holdSource.getSource(),
