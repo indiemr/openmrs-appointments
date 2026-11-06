@@ -10,6 +10,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.runners.MockitoJUnitRunner;
+import org.openmrs.Location;
+import java.util.LinkedHashSet;
 import org.openmrs.Patient;
 import org.openmrs.api.APIException;
 import org.openmrs.module.appointments.dao.AppointmentDao;
@@ -40,6 +42,7 @@ import java.util.Set;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.any;
@@ -402,8 +405,11 @@ public class AppointmentRecurringPatternServiceImplTest {
     public void shouldAssignSameAppointmentNumberToAllNewRecurringAppointments() throws IOException {
         AppointmentRecurringPattern appointmentRecurringPattern = new AppointmentRecurringPattern();
         Appointment appointmentOne = new Appointment();
+        appointmentOne.setLocation(new Location());
         Appointment appointmentTwo = new Appointment();
+        appointmentTwo.setLocation(new Location());
         Appointment appointmentThree = new Appointment();
+        appointmentThree.setLocation(new Location());
         List<Appointment> appointments = Arrays.asList(appointmentOne, appointmentTwo, appointmentThree);
         appointmentRecurringPattern.setAppointments(new HashSet<>(appointments));
 
@@ -449,10 +455,13 @@ public class AppointmentRecurringPatternServiceImplTest {
 
         Appointment existingAppointmentOne = new Appointment();
         existingAppointmentOne.setAppointmentNumber(existingNumber);
+        existingAppointmentOne.setLocation(new Location());
         Appointment existingAppointmentTwo = new Appointment();
         existingAppointmentTwo.setAppointmentNumber(existingNumber);
+        existingAppointmentTwo.setLocation(new Location());
         Appointment newAppointment = new Appointment();
         newAppointment.setAppointmentNumber(null);
+        newAppointment.setLocation(new Location());
 
         List<Appointment> appointments = Arrays.asList(
                 existingAppointmentOne, existingAppointmentTwo, newAppointment);
@@ -506,7 +515,9 @@ public class AppointmentRecurringPatternServiceImplTest {
     public void shouldHandleNullGeneratorGracefullyForAllAppointments() throws IOException {
         AppointmentRecurringPattern appointmentRecurringPattern = new AppointmentRecurringPattern();
         Appointment appointmentOne = new Appointment();
+        appointmentOne.setLocation(new Location());
         Appointment appointmentTwo = new Appointment();
+        appointmentTwo.setLocation(new Location());
         List<Appointment> appointments = Arrays.asList(appointmentOne, appointmentTwo);
         appointmentRecurringPattern.setAppointments(new HashSet<>(appointments));
 
@@ -550,4 +561,23 @@ public class AppointmentRecurringPatternServiceImplTest {
                 .build();
     }
 
+    @Test
+    public void shouldRejectRecurringSaveWhenALaterOccurrenceHasNoLocation() throws IOException {
+        // The validator set only sees occurrence 1, so a series whose later occurrences lack a
+        // location would otherwise persist rows with their side effects dead.
+        AppointmentRecurringPattern appointmentRecurringPattern = new AppointmentRecurringPattern();
+        Appointment first = new Appointment();
+        first.setLocation(new Location());
+        Appointment second = new Appointment();
+        second.setLocation(null);
+        appointmentRecurringPattern.setAppointments(new LinkedHashSet<>(Arrays.asList(first, second)));
+
+        try {
+            recurringAppointmentService.validateAndSave(appointmentRecurringPattern);
+            fail("Expected the save to be rejected because a later occurrence had no location");
+        } catch (APIException e) {
+            assertEquals("Appointment cannot be created without Location", e.getMessage());
+        }
+        verify(appointmentRecurringPatternDao, never()).save(appointmentRecurringPattern);
+    }
 }
