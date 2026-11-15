@@ -77,10 +77,6 @@ public class AppointmentNoteServiceImpl implements AppointmentNoteService {
         if (existing == null || Boolean.TRUE.equals(existing.getVoided())) {
             throw new AppointmentReasonException(AppointmentErrorReason.NOTE_NOT_FOUND, "Appointment note not found");
         }
-        if (!existing.getNoteType().isVisitNote()) {
-            throw new AppointmentReasonException(AppointmentErrorReason.NOTE_NOT_EDITABLE,
-                    existing.getNoteType() + " notes can't be edited");
-        }
         if (existing.getNote().equals(StringUtils.trimToNull(text))) {
             return existing;
         }
