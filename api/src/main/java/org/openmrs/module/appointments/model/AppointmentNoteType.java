@@ -6,7 +6,7 @@ public enum AppointmentNoteType {
     RESCHEDULE,
     CANCEL;
 
-    /** Notes about the visit itself, as opposed to the reason for a reschedule or cancel. Editable. */
+    /** Notes about the visit itself, as opposed to the reason for a reschedule or cancel. */
     public boolean isVisitNote() {
         return this == REASON_FOR_VISIT || this == ADDITIONAL_INFO;
     }

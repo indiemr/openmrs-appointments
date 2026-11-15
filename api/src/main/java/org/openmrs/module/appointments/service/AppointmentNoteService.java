@@ -38,10 +38,9 @@ public interface AppointmentNoteService {
     AppointmentNote getNoteByUuid(String uuid);
 
     /**
-     * Replaces the text of a REASON_FOR_VISIT or ADDITIONAL_INFO note: the old note is voided ("Edited") and a new one with the
+     * Replaces the text of a note of any type: the old note is voided ("Edited") and a new one with the
      * same type, author and provider is saved, so the original text stays as history. Returns the new
-     * note, or the existing one unchanged when the text is the same. RESCHEDULE and CANCEL notes
-     * record an action already taken and can't be edited.
+     * note, or the existing one unchanged when the text is the same.
      */
     @Transactional
     @Authorized({MANAGE_APPOINTMENTS, MANAGE_OWN_APPOINTMENTS})
