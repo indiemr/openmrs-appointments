@@ -31,6 +31,7 @@ public class AppointmentDefaultResponse {
 	private String priority;
 	private List<AppointmentReasonResponse> reasons;
 	private AppointmentBillSummary bill;
+	private String billableServiceUuid; // per-appointment override; null = service default applies
 	private Boolean dateOnly;
 	private String appointmentDate; // return as "yyyy-MM-dd", not epoch
 	private List<AppointmentNoteResponse> notes = new ArrayList<>();
@@ -227,6 +228,14 @@ public class AppointmentDefaultResponse {
 	
 	public void setBill(AppointmentBillSummary bill) {
 		this.bill = bill;
+	}
+
+	public String getBillableServiceUuid() {
+		return billableServiceUuid;
+	}
+
+	public void setBillableServiceUuid(String billableServiceUuid) {
+		this.billableServiceUuid = billableServiceUuid;
 	}
 
 	public Boolean getDateOnly() {

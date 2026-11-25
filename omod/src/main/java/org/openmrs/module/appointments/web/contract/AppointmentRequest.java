@@ -28,6 +28,8 @@ public class AppointmentRequest {
     private List<String> reasonConceptUuids;
     private Boolean sendSms;
     private Boolean createBill;
+    // Billable service override. null = keep the current value, "" = clear (use the service default), uuid = set
+    private String billableServiceUuid;
     private List<AppointmentPayment> payments;
     private Boolean dateOnly = false;
     private String appointmentDate; // "yyyy-MM-dd"
@@ -40,6 +42,14 @@ public class AppointmentRequest {
 
     public void setCreateBill(Boolean createBill) {
         this.createBill = createBill;
+    }
+
+    public String getBillableServiceUuid() {
+        return billableServiceUuid;
+    }
+
+    public void setBillableServiceUuid(String billableServiceUuid) {
+        this.billableServiceUuid = billableServiceUuid;
     }
 
     public List<AppointmentPayment> getPayments() {

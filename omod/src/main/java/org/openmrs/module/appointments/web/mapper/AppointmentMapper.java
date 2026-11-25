@@ -158,6 +158,25 @@ public class AppointmentMapper {
         return appointment;
     }
 
+    /**
+     * null keeps the current override; blank clears it; a uuid sets it.
+     * When the service changes and no override is sent, the old override is dropped so the
+     * new service's default billable service applies.
+     */
+    private void applyBillableServiceOverride(AppointmentRequest appointmentRequest, Appointment appointment,
+                                              AppointmentServiceDefinition previousService) {
+        String requested = appointmentRequest.getBillableServiceUuid();
+        if (requested != null) {
+            appointment.setBillableServiceUuid(StringUtils.isBlank(requested) ? null : requested.trim());
+            return;
+        }
+        boolean serviceChanged = previousService != null && appointment.getService() != null
+                && !StringUtils.equals(previousService.getUuid(), appointment.getService().getUuid());
+        if (serviceChanged) {
+            appointment.setBillableServiceUuid(null);
+        }
+    }
+
     public void mapAppointmentRequestToAppointment(AppointmentRequest appointmentRequest, Appointment appointment) {
         AppointmentServiceDefinition appointmentServiceDefinition = appointmentServiceDefinitionService.getAppointmentServiceByUuid(appointmentRequest.getServiceUuid());
         AppointmentServiceType appointmentServiceType = null;
@@ -173,8 +192,10 @@ public class AppointmentMapper {
         } else {
             appointment.setDateAppointmentScheduled(new Date());
         }
+        AppointmentServiceDefinition previousService = appointment.getService();
         appointment.setServiceType(appointmentServiceType);
         appointment.setService(appointmentServiceDefinition);
+        applyBillableServiceOverride(appointmentRequest, appointment, previousService);
         //appointment.setProvider(identifyAppointmentProvider(appointmentRequest.getProviderUuid()));
         appointment.setLocation(identifyAppointmentLocation(appointmentRequest.getLocationUuid()));
         
@@ -370,6 +391,7 @@ public class AppointmentMapper {
             response.setStartDateTime(a.getStartDateTime());
             response.setEndDateTime(a.getEndDateTime());
         }
+        response.setBillableServiceUuid(a.getBillableServiceUuid());
         if (StringUtils.isNotBlank(a.getBillUuid())) {
             AppointmentBillSummary billSummary = resolveAppointmentBillSummary(a.getBillUuid());
             if (billSummary != null) {

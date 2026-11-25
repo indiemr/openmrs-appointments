@@ -63,6 +63,12 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
     private String billUuid;
 
     /**
+     * Billable service chosen for this appointment at booking/edit time. When set, it overrides
+     * the appointment service's default billable service for bill create/sync.
+     */
+    private String billableServiceUuid;
+
+    /**
      * Transient request-time flag. Not persisted.
      * When true, create a bill for this appointment after save.
      */
@@ -306,6 +312,24 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
         this.billUuid = billUuid;
     }
     
+    public String getBillableServiceUuid() {
+        return billableServiceUuid;
+    }
+
+    public void setBillableServiceUuid(String billableServiceUuid) {
+        this.billableServiceUuid = billableServiceUuid;
+    }
+
+    /**
+     * Billable service to bill this appointment with: the override if set, else the service's default.
+     */
+    public String resolveEffectiveBillableServiceUuid() {
+        if (billableServiceUuid != null && !billableServiceUuid.trim().isEmpty()) {
+            return billableServiceUuid;
+        }
+        return service != null ? service.getBillableServiceUuid() : null;
+    }
+
     public Boolean getCreateBill() {
         return createBill;
     }

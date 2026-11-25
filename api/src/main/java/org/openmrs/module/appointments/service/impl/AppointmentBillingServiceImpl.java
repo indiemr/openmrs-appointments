@@ -61,9 +61,9 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
             return appointment.getBillUuid();
         }
 
-        AppointmentServiceDefinition service = appointment.getService();
-        if (service == null || StringUtils.isBlank(service.getBillableServiceUuid())) {
-            throw new IllegalArgumentException("Appointment service has no linked billable service");
+        String billableServiceUuid = resolveBillableServiceUuid(appointment);
+        if (StringUtils.isBlank(billableServiceUuid)) {
+            throw new IllegalArgumentException("No billable service on appointment or its appointment service");
         }
         Patient patient = appointment.getPatient();
         if (patient == null) {
@@ -71,9 +71,9 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
         }
 
         IBillableItemsService billableItemsService = billableItemsService();
-        BillableService billableService = billableItemsService.getByUuid(service.getBillableServiceUuid());
+        BillableService billableService = billableItemsService.getByUuid(billableServiceUuid);
         if (billableService == null) {
-            throw new IllegalArgumentException("Billable service not found: " + service.getBillableServiceUuid());
+            throw new IllegalArgumentException("Billable service not found: " + billableServiceUuid);
         }
         
         BigDecimal price = resolveDefaultPrice(billableService);
@@ -216,7 +216,7 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
         log.info("Voided bill " + bill.getUuid() + " for cancelled appointment " + appointment.getUuid());
     }
 
-    private boolean hasPayments(Bill bill) {
+    private static boolean hasPayments(Bill bill) {
         if (bill.getPayments() == null) {
             return false;
         }
@@ -261,18 +261,34 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
             return appointment.getBillUuid();
         }
 
+        // Never rewrite a settled or part-paid bill in place; the validator rejects such edits up front
+        if (isBillLocked(oldBill)) {
+            log.warn("Bill " + oldBill.getUuid() + " is paid or has payments; not changing billable service from "
+                    + oldBillableServiceUuid + " to " + newBillableServiceUuid + " for appointment " + appointmentUuid);
+            return appointment.getBillUuid();
+        }
+
         log.info("diff service, updating bill line item in place....");
 
-        return updateBillLineItemForServiceChange(appointment, oldBill, oldBillableServiceUuid);
-        
+        return updateBillLineItemForServiceChange(appointment, oldBill, oldBillableServiceUuid, newBillableServiceUuid);
+
     }
 
-    private String updateBillLineItemForServiceChange(Appointment appointment, Bill bill, String oldBillableServiceUuid) {
-        AppointmentServiceDefinition service = appointment.getService();
+    /**
+     * A bill that is PAID/POSTED or carries non-voided payments must not have its line items rewritten.
+     */
+    public static boolean isBillLocked(Bill bill) {
+        return bill != null && (BillStatus.PAID.equals(bill.getStatus())
+                || BillStatus.POSTED.equals(bill.getStatus())
+                || hasPayments(bill));
+    }
+
+    private String updateBillLineItemForServiceChange(Appointment appointment, Bill bill, String oldBillableServiceUuid,
+                                                      String newBillableServiceUuid) {
         IBillableItemsService billableItemsService = billableItemsService();
-        BillableService newBillableService = billableItemsService.getByUuid(service.getBillableServiceUuid());
+        BillableService newBillableService = billableItemsService.getByUuid(newBillableServiceUuid);
         if (newBillableService == null) {
-            throw new IllegalArgumentException("Billable service not found: " + service.getBillableServiceUuid());
+            throw new IllegalArgumentException("Billable service not found: " + newBillableServiceUuid);
         }
         BigDecimal newPrice = resolveDefaultPrice(newBillableService);
         if (newPrice == null) {
@@ -375,13 +391,10 @@ public class AppointmentBillingServiceImpl implements AppointmentBillingService 
     }
 
     private String resolveBillableServiceUuid(Appointment appointment) {
-        if (appointment == null || appointment.getService() == null) {
-            return null;
-        }
-        return appointment.getService().getBillableServiceUuid();
+        return appointment == null ? null : appointment.resolveEffectiveBillableServiceUuid();
     }
 
-    private String resolveBilledServiceUuid(Bill bill) {
+    public static String resolveBilledServiceUuid(Bill bill) {
         if (bill == null || bill.getLineItems() == null) {
             return null;
         }

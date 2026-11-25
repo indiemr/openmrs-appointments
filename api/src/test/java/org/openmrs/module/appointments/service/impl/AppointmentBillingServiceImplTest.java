@@ -429,6 +429,98 @@ public class AppointmentBillingServiceImplTest {
         verify(billService).save(bill);
     }
 
+    @Test
+    public void shouldCreateBillWithOverrideBillableService() {
+        Appointment appointment = appointmentWithServiceAndPatient();
+        appointment.setUuid("appt");
+        appointment.setBillableServiceUuid("override-bs");
+        appointment.setLocation(new Location());
+        appointment.getService().setProvider(new Provider());
+        when(appointmentDao.getAppointmentByUuid("appt")).thenReturn(appointment);
+        when(billableItemsService.getByUuid("override-bs")).thenReturn(billableService);
+        when(billableService.getServicePrices()).thenReturn(Collections.singletonList(pricedItem("700")));
+        when(cashPointService.getCashPointsByLocation(any(Location.class), eq(false)))
+                .thenReturn(Collections.singletonList(new CashPoint()));
+        when(billService.save(any(Bill.class))).thenAnswer(invocation -> invocation.getArguments()[0]);
+
+        service.createBillForAppointment("appt", true);
+
+        verify(billableItemsService, never()).getByUuid("bs-uuid");
+        ArgumentCaptor<Bill> captor = ArgumentCaptor.forClass(Bill.class);
+        verify(billService).save(captor.capture());
+        assertEquals(billableService, captor.getValue().getLineItems().get(0).getBillableService());
+        assertEquals(new BigDecimal("700"), captor.getValue().getLineItems().get(0).getPrice());
+    }
+
+    @Test
+    public void shouldCreateBillWithOverrideWhenServiceHasNoBillableService() {
+        Appointment appointment = new Appointment();
+        appointment.setUuid("appt");
+        appointment.setService(new AppointmentServiceDefinition());
+        appointment.setPatient(new Patient());
+        appointment.setBillableServiceUuid("override-bs");
+        appointment.setLocation(new Location());
+        appointment.getService().setProvider(new Provider());
+        when(appointmentDao.getAppointmentByUuid("appt")).thenReturn(appointment);
+        when(billableItemsService.getByUuid("override-bs")).thenReturn(billableService);
+        when(billableService.getServicePrices()).thenReturn(Collections.singletonList(pricedItem("700")));
+        when(cashPointService.getCashPointsByLocation(any(Location.class), eq(false)))
+                .thenReturn(Collections.singletonList(new CashPoint()));
+        when(billService.save(any(Bill.class))).thenAnswer(invocation -> invocation.getArguments()[0]);
+
+        service.createBillForAppointment("appt", true);
+
+        verify(billService).save(any(Bill.class));
+    }
+
+    @Test
+    public void shouldKeepOverrideBillOnSyncWhenServiceDefaultDiffers() {
+        Appointment appointment = appointmentWithServiceAndPatient();
+        appointment.setBillUuid("bill");
+        appointment.setBillableServiceUuid("override-bs");
+        when(appointmentDao.getAppointmentByUuid("appt")).thenReturn(appointment);
+        when(billService.getByUuid("bill")).thenReturn(billWithLineItem("override-bs"));
+
+        assertEquals("bill", service.syncBillWithAppointmentService("appt"));
+        verify(billService, never()).save(any(Bill.class));
+    }
+
+    @Test
+    public void shouldUpdateLineItemToOverrideOnSync() {
+        Appointment appointment = appointmentWithServiceAndPatient();
+        appointment.setUuid("appt");
+        appointment.setBillUuid("bill");
+        appointment.setBillableServiceUuid("override-bs");
+        when(appointmentDao.getAppointmentByUuid("appt")).thenReturn(appointment);
+        Bill bill = billWithLineItem("bs-uuid");
+        bill.setUuid("bill");
+        bill.setPayments(new HashSet<>());
+        when(billService.getByUuid("bill")).thenReturn(bill);
+        when(billableItemsService.getByUuid("override-bs")).thenReturn(billableService);
+        when(billableService.getUuid()).thenReturn("override-bs");
+        when(billableService.getServicePrices()).thenReturn(Collections.singletonList(pricedItem("900")));
+        when(billService.save(bill)).thenReturn(bill);
+
+        assertEquals("bill", service.syncBillWithAppointmentService("appt"));
+        assertEquals(billableService, bill.getLineItems().get(0).getBillableService());
+        assertEquals(new BigDecimal("900"), bill.getLineItems().get(0).getPrice());
+    }
+
+    @Test
+    public void shouldNotChangeLineItemOfPaidBillOnSync() {
+        Appointment appointment = appointmentWithServiceAndPatient();
+        appointment.setBillUuid("bill");
+        appointment.setBillableServiceUuid("override-bs");
+        when(appointmentDao.getAppointmentByUuid("appt")).thenReturn(appointment);
+        Bill bill = billWithLineItem("bs-uuid");
+        bill.setStatus(BillStatus.PAID);
+        when(billService.getByUuid("bill")).thenReturn(bill);
+
+        assertEquals("bill", service.syncBillWithAppointmentService("appt"));
+        verify(billService, never()).save(any(Bill.class));
+        assertEquals("bs-uuid", bill.getLineItems().get(0).getBillableService().getUuid());
+    }
+
     private Appointment appointmentWithServiceAndPatient() {
         Appointment appointment = new Appointment();
         AppointmentServiceDefinition definition = new AppointmentServiceDefinition();

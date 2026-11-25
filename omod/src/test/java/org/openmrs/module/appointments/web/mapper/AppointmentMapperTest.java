@@ -266,6 +266,61 @@ public class AppointmentMapperTest {
     }
 
     @Test
+    public void shouldSetBillableServiceOverrideFromPayload() throws Exception {
+        AppointmentRequest appointmentRequest = createAppointmentRequest();
+        appointmentRequest.setBillableServiceUuid(" override-bs ");
+        Appointment appointment = appointmentMapper.fromRequest(appointmentRequest);
+        assertEquals("override-bs", appointment.getBillableServiceUuid());
+    }
+
+    @Test
+    public void shouldKeepBillableServiceOverrideWhenPayloadOmitsIt() throws Exception {
+        String appointmentUuid = "7869637c-12fe-4121-9692-b01f93f99e55";
+        Appointment existingAppointment = createAppointment();
+        existingAppointment.setUuid(appointmentUuid);
+        existingAppointment.setService(service);
+        existingAppointment.setBillableServiceUuid("override-bs");
+        when(appointmentsService.getAppointmentByUuid(appointmentUuid)).thenReturn(existingAppointment);
+        AppointmentRequest appointmentRequest = createAppointmentRequest();
+        appointmentRequest.setUuid(appointmentUuid);
+
+        Appointment appointment = appointmentMapper.fromRequest(appointmentRequest);
+        assertEquals("override-bs", appointment.getBillableServiceUuid());
+    }
+
+    @Test
+    public void shouldClearBillableServiceOverrideWhenPayloadSendsBlank() throws Exception {
+        String appointmentUuid = "7869637c-12fe-4121-9692-b01f93f99e55";
+        Appointment existingAppointment = createAppointment();
+        existingAppointment.setUuid(appointmentUuid);
+        existingAppointment.setService(service);
+        existingAppointment.setBillableServiceUuid("override-bs");
+        when(appointmentsService.getAppointmentByUuid(appointmentUuid)).thenReturn(existingAppointment);
+        AppointmentRequest appointmentRequest = createAppointmentRequest();
+        appointmentRequest.setUuid(appointmentUuid);
+        appointmentRequest.setBillableServiceUuid("");
+
+        Appointment appointment = appointmentMapper.fromRequest(appointmentRequest);
+        assertNull(appointment.getBillableServiceUuid());
+    }
+
+    @Test
+    public void shouldClearBillableServiceOverrideWhenServiceChangesWithoutOverride() throws Exception {
+        String appointmentUuid = "7869637c-12fe-4121-9692-b01f93f99e55";
+        Appointment existingAppointment = createAppointment();
+        existingAppointment.setUuid(appointmentUuid);
+        existingAppointment.setService(service2);
+        existingAppointment.setBillableServiceUuid("override-bs");
+        when(appointmentsService.getAppointmentByUuid(appointmentUuid)).thenReturn(existingAppointment);
+        AppointmentRequest appointmentRequest = createAppointmentRequest();
+        appointmentRequest.setUuid(appointmentUuid);
+
+        Appointment appointment = appointmentMapper.fromRequest(appointmentRequest);
+        assertEquals(service, appointment.getService());
+        assertNull(appointment.getBillableServiceUuid());
+    }
+
+    @Test
     public void shouldCreateAppointmentWithStatusFromPayload() throws ParseException {
         AppointmentRequest appointmentRequest = createAppointmentRequest();
         appointmentRequest.setStatus("CheckedIn");
