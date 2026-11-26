@@ -70,6 +70,13 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
 
     /**
      * Transient request-time flag. Not persisted.
+     * True when this save changes what the appointment is billed with (service or billable service override).
+     * Only then is the bill synced, so routine saves (check-in, time change) leave the bill untouched.
+     */
+    private Boolean billableServiceChanged;
+
+    /**
+     * Transient request-time flag. Not persisted.
      * When true, create a bill for this appointment after save.
      */
     private Boolean createBill;
@@ -318,6 +325,14 @@ public class Appointment extends BaseOpenmrsData implements Serializable {
 
     public void setBillableServiceUuid(String billableServiceUuid) {
         this.billableServiceUuid = billableServiceUuid;
+    }
+
+    public Boolean getBillableServiceChanged() {
+        return billableServiceChanged;
+    }
+
+    public void setBillableServiceChanged(Boolean billableServiceChanged) {
+        this.billableServiceChanged = billableServiceChanged;
     }
 
     /**

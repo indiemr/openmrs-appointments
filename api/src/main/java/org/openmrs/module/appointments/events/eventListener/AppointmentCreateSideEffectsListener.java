@@ -93,8 +93,10 @@ public class AppointmentCreateSideEffectsListener {
                 }
             }
 
-            // 3) Service changed -> void old bill + create new (or keep if same service)
-            if (StringUtils.isNotBlank(responseAppointment.getBillUuid())) {
+            // 3) Billable service changed in this save -> sync bill line. Routine saves (check-in, time change)
+            //    skip this, so corrections made in bill history are not overwritten.
+            if (StringUtils.isNotBlank(responseAppointment.getBillUuid())
+                    && Boolean.TRUE.equals(responseAppointment.getBillableServiceChanged())) {
                 try {
                     String billUuid = appointmentBillingService.syncBillWithAppointmentService(appointmentUuid);
                     if (StringUtils.isNotBlank(billUuid)) {

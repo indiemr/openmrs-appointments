@@ -164,16 +164,22 @@ public class AppointmentMapper {
      * new service's default billable service applies.
      */
     private void applyBillableServiceOverride(AppointmentRequest appointmentRequest, Appointment appointment,
-                                              AppointmentServiceDefinition previousService) {
+                                              AppointmentServiceDefinition previousService,
+                                              String previousEffectiveBillableServiceUuid) {
         String requested = appointmentRequest.getBillableServiceUuid();
         if (requested != null) {
             appointment.setBillableServiceUuid(StringUtils.isBlank(requested) ? null : requested.trim());
-            return;
+        } else {
+            boolean serviceChanged = previousService != null && appointment.getService() != null
+                    && !StringUtils.equals(previousService.getUuid(), appointment.getService().getUuid());
+            if (serviceChanged) {
+                appointment.setBillableServiceUuid(null);
+            }
         }
-        boolean serviceChanged = previousService != null && appointment.getService() != null
-                && !StringUtils.equals(previousService.getUuid(), appointment.getService().getUuid());
-        if (serviceChanged) {
-            appointment.setBillableServiceUuid(null);
+        // Existing appointment only: flag a bill sync when what it is billed with actually changed
+        if (previousService != null) {
+            appointment.setBillableServiceChanged(!StringUtils.equals(previousEffectiveBillableServiceUuid,
+                    appointment.resolveEffectiveBillableServiceUuid()));
         }
     }
 
@@ -193,9 +199,11 @@ public class AppointmentMapper {
             appointment.setDateAppointmentScheduled(new Date());
         }
         AppointmentServiceDefinition previousService = appointment.getService();
+        String previousEffectiveBillableServiceUuid = appointment.resolveEffectiveBillableServiceUuid();
         appointment.setServiceType(appointmentServiceType);
         appointment.setService(appointmentServiceDefinition);
-        applyBillableServiceOverride(appointmentRequest, appointment, previousService);
+        applyBillableServiceOverride(appointmentRequest, appointment, previousService,
+                previousEffectiveBillableServiceUuid);
         //appointment.setProvider(identifyAppointmentProvider(appointmentRequest.getProviderUuid()));
         appointment.setLocation(identifyAppointmentLocation(appointmentRequest.getLocationUuid()));
         
