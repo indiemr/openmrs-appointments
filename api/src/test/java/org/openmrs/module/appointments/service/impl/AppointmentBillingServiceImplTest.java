@@ -507,18 +507,27 @@ public class AppointmentBillingServiceImplTest {
     }
 
     @Test
-    public void shouldNotChangeLineItemOfPaidBillOnSync() {
+    public void shouldUpdateLineItemOfPaidBillOnSync() {
+        // Same as main: a paid bill is re-priced; the difference shows as due/refund in bill history
         Appointment appointment = appointmentWithServiceAndPatient();
+        appointment.setUuid("appt");
         appointment.setBillUuid("bill");
         appointment.setBillableServiceUuid("override-bs");
         when(appointmentDao.getAppointmentByUuid("appt")).thenReturn(appointment);
         Bill bill = billWithLineItem("bs-uuid");
+        bill.setUuid("bill");
         bill.setStatus(BillStatus.PAID);
+        bill.setPayments(new HashSet<>());
         when(billService.getByUuid("bill")).thenReturn(bill);
+        when(billableItemsService.getByUuid("override-bs")).thenReturn(billableService);
+        when(billableService.getUuid()).thenReturn("override-bs");
+        when(billableService.getServicePrices()).thenReturn(Collections.singletonList(pricedItem("900")));
+        when(billService.save(bill)).thenReturn(bill);
 
         assertEquals("bill", service.syncBillWithAppointmentService("appt"));
-        verify(billService, never()).save(any(Bill.class));
-        assertEquals("bs-uuid", bill.getLineItems().get(0).getBillableService().getUuid());
+        verify(billService).save(bill);
+        assertEquals(billableService, bill.getLineItems().get(0).getBillableService());
+        assertEquals(new BigDecimal("900"), bill.getLineItems().get(0).getPrice());
     }
 
     private Appointment appointmentWithServiceAndPatient() {

@@ -176,8 +176,10 @@ public class AppointmentMapper {
                 appointment.setBillableServiceUuid(null);
             }
         }
-        // Existing appointment only: flag a bill sync when what it is billed with actually changed
-        if (previousService != null) {
+        // Existing appointment only: flag a bill sync when what it is billed with actually changed.
+        // The mapper runs twice per save (AppointmentEventsAdvice.before calls the Supplier), and only the first run
+        // sees the stored appointment, so decide once and keep that decision.
+        if (previousService != null && appointment.getBillableServiceChanged() == null) {
             appointment.setBillableServiceChanged(!StringUtils.equals(previousEffectiveBillableServiceUuid,
                     appointment.resolveEffectiveBillableServiceUuid()));
         }

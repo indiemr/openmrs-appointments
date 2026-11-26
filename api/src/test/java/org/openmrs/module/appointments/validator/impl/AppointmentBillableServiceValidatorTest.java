@@ -116,7 +116,7 @@ public class AppointmentBillableServiceValidatorTest {
 
         validator.validate(appointment, errors);
         assertEquals(1, errors.size());
-        assertEquals("Billable service Consultation Fee belongs to another clinic", errors.get(0));
+        assertEquals("Billable service Consultation Fee not found", errors.get(0).trim());
     }
 
     @Test

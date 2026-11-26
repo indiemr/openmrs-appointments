@@ -308,6 +308,35 @@ public class AppointmentMapperTest {
         assertNull(appointment.getBillableServiceChanged());
     }
 
+    @Test
+    public void shouldKeepBillableServiceChangeWhenMapperRunsTwiceOnSameAppointment() throws Exception {
+        // AppointmentEventsAdvice.before() runs the mapper Supplier, then validateAndSave runs it again
+        AppointmentRequest request = existingAppointmentRequest(service, "override-bs", "other-bs");
+        appointmentMapper.fromRequest(request);
+        Appointment appointment = appointmentMapper.fromRequest(request);
+        assertEquals("other-bs", appointment.getBillableServiceUuid());
+        assertEquals(Boolean.TRUE, appointment.getBillableServiceChanged());
+    }
+
+    @Test
+    public void shouldKeepServiceChangeWhenMapperRunsTwiceOnSameAppointment() throws Exception {
+        service.setBillableServiceUuid("default-bs");
+        service2.setBillableServiceUuid("service2-bs");
+        AppointmentRequest request = existingAppointmentRequest(service2, null, null);
+        appointmentMapper.fromRequest(request);
+        Appointment appointment = appointmentMapper.fromRequest(request);
+        assertEquals(service, appointment.getService());
+        assertEquals(Boolean.TRUE, appointment.getBillableServiceChanged());
+    }
+
+    @Test
+    public void shouldNotFlagRoutineSaveWhenMapperRunsTwiceOnSameAppointment() throws Exception {
+        AppointmentRequest request = existingAppointmentRequest(service, "override-bs", null);
+        appointmentMapper.fromRequest(request);
+        Appointment appointment = appointmentMapper.fromRequest(request);
+        assertEquals(Boolean.FALSE, appointment.getBillableServiceChanged());
+    }
+
     /** Request (for serviceUuid) updating an existing appointment that currently has the given service and override */
     private AppointmentRequest existingAppointmentRequest(AppointmentServiceDefinition currentService,
                                                           String currentOverride, String requestedOverride)
