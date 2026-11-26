@@ -5,6 +5,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.openmrs.Location;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.model.AppointmentServiceDefinition;
 import org.openmrs.module.appointments.model.AppointmentStatus;
@@ -102,6 +103,48 @@ public class AppointmentBillableServiceValidatorTest {
         validator.validate(appointment("override-bs"), errors);
         assertEquals(1, errors.size());
         assertTrue(errors.get(0).startsWith("No price configured"));
+    }
+
+    @Test
+    public void shouldRejectOverrideFromAnotherClinic() {
+        BillableService billableService = billableService("override-bs", "200");
+        billableService.setName("Consultation Fee");
+        billableService.setLocation(location("nh-clinic"));
+        when(billableItemsService.getByUuid("override-bs")).thenReturn(billableService);
+        Appointment appointment = appointment("override-bs");
+        appointment.setLocation(location("nysha-clinic"));
+
+        validator.validate(appointment, errors);
+        assertEquals(1, errors.size());
+        assertEquals("Billable service Consultation Fee belongs to another clinic", errors.get(0));
+    }
+
+    @Test
+    public void shouldAcceptOverrideFromSameClinic() {
+        BillableService billableService = billableService("override-bs", "1000");
+        billableService.setLocation(location("nysha-clinic"));
+        when(billableItemsService.getByUuid("override-bs")).thenReturn(billableService);
+        Appointment appointment = appointment("override-bs");
+        appointment.setLocation(location("nysha-clinic"));
+
+        validator.validate(appointment, errors);
+        assertTrue(errors.isEmpty());
+    }
+
+    @Test
+    public void shouldAcceptOverrideWithoutClinic() {
+        when(billableItemsService.getByUuid("override-bs")).thenReturn(billableService("override-bs", "500"));
+        Appointment appointment = appointment("override-bs");
+        appointment.setLocation(location("nysha-clinic"));
+
+        validator.validate(appointment, errors);
+        assertTrue(errors.isEmpty());
+    }
+
+    private Location location(String uuid) {
+        Location location = new Location();
+        location.setUuid(uuid);
+        return location;
     }
 
     private Appointment appointment(String override) {

@@ -1,6 +1,7 @@
 package org.openmrs.module.appointments.validator.impl;
 
 import org.apache.commons.lang.StringUtils;
+import org.openmrs.Location;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.appointments.model.Appointment;
 import org.openmrs.module.appointments.validator.AppointmentValidator;
@@ -25,11 +26,11 @@ public class AppointmentBillableServiceValidator implements AppointmentValidator
         }
         String override = appointment.getBillableServiceUuid();
         if (StringUtils.isNotBlank(override)) {
-            validateOverride(override, errors);
+            validateOverride(appointment, override, errors);
         }
     }
 
-    private void validateOverride(String billableServiceUuid, List<String> errors) {
+    private void validateOverride(Appointment appointment, String billableServiceUuid, List<String> errors) {
         BillableService billableService = billableItemsService().getByUuid(billableServiceUuid);
         if (billableService == null) {
             errors.add("Billable service not found: " + billableServiceUuid);
@@ -42,7 +43,16 @@ public class AppointmentBillableServiceValidator implements AppointmentValidator
         }
         if (!hasPrice(billableService)) {
             errors.add("No price configured for billable service: " + billableServiceUuid);
+            return;
         }
+        if (isOtherClinic(billableService.getLocation(), appointment.getLocation())) {
+            errors.add("Billable service " + billableService.getName() + " not found ");
+        }
+    }
+
+    private boolean isOtherClinic(Location billableServiceLocation, Location appointmentLocation) {
+        return billableServiceLocation != null && appointmentLocation != null
+                && !StringUtils.equals(billableServiceLocation.getUuid(), appointmentLocation.getUuid());
     }
 
     private boolean hasPrice(BillableService billableService) {
