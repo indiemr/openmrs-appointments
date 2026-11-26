@@ -1366,4 +1366,18 @@
             <column name="note_type"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="add_billable_service_uuid_to_patient_appointment" author="senthil_athiban">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="patient_appointment" columnName="billable_service_uuid" />
+            </not>
+        </preConditions>
+        <comment>Per-appointment billable service override (falls back to the appointment service's billable service)</comment>
+        <addColumn tableName="patient_appointment">
+            <column name="billable_service_uuid" type="varchar(38)">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

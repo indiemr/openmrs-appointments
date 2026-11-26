@@ -547,6 +547,7 @@ public class AppointmentsServiceImpl implements AppointmentsService {
                 newAppointment.setAppointmentNumber(prevAppointment.getAppointmentNumber());
             }
             newAppointment.setStatus(AppointmentStatus.Confirmed);
+            carryOverBillableService(prevAppointment, newAppointment);
             // A reschedule is not a new booking, so no source is recorded for the new row
             validate(newAppointment, appointmentValidators);
             checkAndAssignAppointmentNumber(newAppointment);
@@ -562,6 +563,21 @@ public class AppointmentsServiceImpl implements AppointmentsService {
             return newAppointment;
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Keep the billable service override across a reschedule when the request didn't send one
+     * and the appointment service is unchanged.
+     */
+    private void carryOverBillableService(Appointment prevAppointment, Appointment newAppointment) {
+        if (StringUtils.isNotBlank(newAppointment.getBillableServiceUuid())
+                || StringUtils.isBlank(prevAppointment.getBillableServiceUuid())
+                || prevAppointment.getService() == null || newAppointment.getService() == null) {
+            return;
+        }
+        if (StringUtils.equals(prevAppointment.getService().getUuid(), newAppointment.getService().getUuid())) {
+            newAppointment.setBillableServiceUuid(prevAppointment.getBillableServiceUuid());
         }
     }
 

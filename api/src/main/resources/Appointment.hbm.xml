@@ -58,6 +58,7 @@
         <property name="teleHealthVideoLink" type="java.lang.String" column="tele_health_video_link" length="255"/>
         
         <property name="billUuid" type="java.lang.String" column="bill_uuid" length="38"/>
+        <property name="billableServiceUuid" type="java.lang.String" column="billable_service_uuid" length="38"/>
         
         <many-to-one name="voidedBy" class="org.openmrs.User" column="voided_by" />
         <many-to-one name="changedBy" class="org.openmrs.User" column="changed_by" />
